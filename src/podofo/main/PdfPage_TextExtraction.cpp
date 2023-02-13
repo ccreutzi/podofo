@@ -377,6 +377,9 @@ void PdfPage::ExtractTextTo(vector<PdfTextEntry>& entries, const string_view& pa
                     case PdfOperator::Q:
                     {
                         ASSERT(!context.BlockOpen, "Text block must be not open");
+                        if (context.States.GetSize() < 2) { // always leaving at least one state on the stack
+                            PODOFO_RAISE_ERROR_INFO(PdfErrorCode::BrokenFile, "Q without matching q");
+                        }
                         context.States.Pop();
                         break;
                     }
