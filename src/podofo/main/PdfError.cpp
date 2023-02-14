@@ -122,6 +122,8 @@ string_view PdfError::ErrorName(PdfErrorCode code)
             return "PdfErrorCode::InvalidStrokeStyle"sv;
         case PdfErrorCode::InvalidHexString:
             return "PdfErrorCode::InvalidHexString"sv;
+        case PdfErrorCode::InvalidUTF16String:
+            return "PdfErrorCode::InvalidUTF16String"sv;
         case PdfErrorCode::InvalidStream:
             return "PdfErrorCode::InvalidStream"sv;
         case PdfErrorCode::InvalidStreamLength:

@@ -55,6 +55,7 @@ enum class PdfErrorCode
     InvalidPredictor,         ///< Invalid or unimplemented predictor
     InvalidStrokeStyle,       ///< Invalid stroke style during drawing
     InvalidHexString,         ///< Invalid hex string
+    InvalidUTF16String,       ///< Invalid UTF-16 string
     InvalidStream,            ///< The stream is invalid
     InvalidStreamLength,      ///< The stream length is invalid
     InvalidKey,               ///< The specified key is invalid
