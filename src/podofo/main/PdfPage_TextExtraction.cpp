@@ -415,9 +415,14 @@ void PdfPage::ExtractTextTo(vector<PdfTextEntry>& entries, const string_view& pa
                 context.XObjectStateIndices.pop_back();
                 break;
             }
+            case PdfContentType::UnexpectedKeyword:
+            {
+                PODOFO_RAISE_ERROR_INFO(PdfErrorCode::BrokenFile, "Unexpected Keyword");
+            }
             default:
             {
-                throw runtime_error("Unsupported PdfContentType");
+                // Ignore all the other content types
+                break;
             }
         }
     }
