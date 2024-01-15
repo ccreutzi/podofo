@@ -8,7 +8,7 @@
 #include "PdfXRef.h"
 
 #include "PdfObject.h"
-#include "PdfOutputDevice.h"
+#include <podofo/auxiliary/OutputDevice.h>
 #include "PdfWriter.h"
 
 #include <algorithm>
@@ -207,7 +207,7 @@ const PdfReference* PdfXRef::getNextFreeObject(XRefBlockList::const_iterator itB
 
 uint32_t PdfXRef::GetSize() const
 {
-    // From the PdfReference: /Size's value is 1 greater than the highes object number used in the file.
+    // From the PdfReference: /Size's value is 1 greater than the highest object number used in the file.
     return m_maxObjCount + 1;
 }
 
@@ -286,7 +286,7 @@ void PdfXRef::WriteXRefEntry(OutputStreamDevice& device, const PdfReference& ref
 
 void PdfXRef::EndWriteImpl(OutputStreamDevice& device, charbuff& buffer)
 {
-    PdfObject  trailer;
+    PdfObject trailer;
 
     // if we have a dummy offset we write also a prev entry to the trailer
     m_writer->FillTrailerObject(trailer, GetSize(), false);
@@ -294,7 +294,7 @@ void PdfXRef::EndWriteImpl(OutputStreamDevice& device, charbuff& buffer)
     device.Write("trailer\n");
 
     // NOTE: Do not encrypt the trailer dictionary
-    trailer.Write(device, m_writer->GetWriteFlags(), nullptr, buffer);
+    trailer.WriteFinal(device, m_writer->GetWriteFlags(), nullptr, buffer);
 }
 
 void PdfXRef::endWrite(OutputStreamDevice& device, charbuff& buffer)

@@ -123,8 +123,8 @@ public:
     /** Try get a replacement font based on this font characteristics
      *  \param substFont the created substitute font
      */
-    bool TryGetSubstituteFont(PdfFont*& substFont);
-    bool TryGetSubstituteFont(PdfFontCreateFlags initFlags, PdfFont*& substFont);
+    bool TryGetSubstituteFont(PdfFont*& substFont) const;
+    bool TryGetSubstituteFont(PdfFontCreateFlags initFlags, PdfFont*& substFont) const;
 
     /** Write a string to a PdfObjectStream in a format so that it can
      *  be used with this font.
@@ -187,7 +187,7 @@ public:
     double GetWordSpacingLength(const PdfTextState& state) const;
 
     /**
-     *  \remarks Doesn't throw if characater glyph could not be found
+     *  \remarks Doesn't throw if character glyph could not be found
      */
     double GetCharLength(char32_t codePoint, const PdfTextState& state, bool ignoreCharSpacing = false) const;
 
@@ -226,17 +226,17 @@ public:
      */
     double GetUnderlinePosition(const PdfTextState& state) const;
 
-    /** Return the position of the strikeout for the current font
+    /** Return the position of the strikethrough for the current font
      *  size in PDF units
-     *  \returns the underline position in PDF units
+     *  \returns the strikethrough position in PDF units
      */
-    double GetStrikeOutPosition(const PdfTextState& state) const;
+    double GetStrikeThroughPosition(const PdfTextState& state) const;
 
-    /** Get the width of the strikeout for the current
+    /** Get the width of the strikethrough for the current
      *  font size in PDF units
-     *  \returns the thickness of the strikeout in PDF units
+     *  \returns the thickness of the strikethrough in PDF units
      */
-    double GetStrikeOutThickness(const PdfTextState& state) const;
+    double GetStrikeThroughThickness(const PdfTextState& state) const;
 
     /** Get the ascent of this font in PDF
      *  units for the current font size.
@@ -354,7 +354,7 @@ protected:
 
     virtual PdfObject* getDescendantFontObject();
 
-    /** Inititialization tasks for imported/created from scratch fonts
+    /** Initialization tasks for imported/created from scratch fonts
      */
     virtual void initImported();
 
@@ -371,7 +371,7 @@ private:
     void EmbedFont();
 
     /**
-     * Perform inititialization tasks for fonts imported or created
+     * Perform initialization tasks for fonts imported or created
      * from scratch
      */
     void InitImported(bool wantEmbed, bool wantSubset);
@@ -406,7 +406,8 @@ private:
 
     double getStringLength(const std::vector<PdfCID>& cids, const PdfTextState& state) const;
 
-    PdfObject& embedFontFileData(PdfObject& descriptor, const PdfName& fontFileName, const bufferview& data);
+    void embedFontFileData(PdfObject& descriptor, const PdfName& fontFileName,
+        const std::function<void(PdfDictionary& dict)>& dictWriter, const bufferview& data);
 
     static std::unique_ptr<PdfFont> createFontForType(PdfDocument& doc, const PdfFontMetricsConstPtr& metrics,
         const PdfEncoding& encoding, PdfFontFileType type, bool preferNonCID);

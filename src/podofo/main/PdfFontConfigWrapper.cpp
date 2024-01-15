@@ -13,7 +13,7 @@ using namespace std;
 using namespace PoDoFo;
 
 #if defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
-// Windows, Android and Apple architectures don't primarly
+// Windows, Android and Apple architectures don't primarily
 // use fontconfig. We can supply a fallback configuration,
 // if a system configuration is not found
 #define HAS_FALLBACK_CONFIGURATION
@@ -118,6 +118,7 @@ void PdfFontConfigWrapper::createDefaultConfig()
 <!DOCTYPE fontconfig SYSTEM "fonts.dtd">
 <fontconfig>
     <dir>WINDOWSFONTDIR</dir>
+    <dir>WINDOWSUSERFONTDIR</dir>
     <dir prefix="xdg">fonts</dir>
     <cachedir>LOCAL_APPDATA_FONTCONFIG_CACHE</cachedir>
     <cachedir prefix="xdg">fontconfig</cachedir>

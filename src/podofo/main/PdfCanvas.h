@@ -15,7 +15,7 @@ namespace PoDoFo {
 
 class PdfDictionary;
 class PdfObject;
-class PdfRect;
+class Rect;
 class PdfColor;
 
 enum class PdfStreamAppendFlags
@@ -76,21 +76,20 @@ public:
      */
     virtual PdfResources& GetOrCreateResources() = 0;
 
-    /** Get the current canvas size in PDF Units
-     *  \returns a PdfRect containing the page size available for drawing
+    /** Ensure resources initialized on this canvas
      */
-    virtual PdfRect GetRect() const = 0;
+    virtual void EnsureResourcesCreated() = 0;
+
+    /** Get the current canvas size in PDF Units
+     *  \returns a Rect containing the page size available for drawing
+     */
+    virtual Rect GetRectRaw() const = 0;
 
     /** Get the current canvas rotation
      * \param teta counterclockwise rotation in radians
      * \returns true if the canvas has a rotation
      */
     virtual bool HasRotation(double& teta) const = 0;
-
-    /** Get a copy of procset PdfArray.
-     *  \returns a procset PdfArray
-     */
-    static PdfArray GetProcSet();
 
 protected:
     virtual PdfObject* getContentsObject() = 0;

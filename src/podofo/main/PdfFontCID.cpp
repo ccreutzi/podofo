@@ -13,8 +13,8 @@
 #include "PdfName.h"
 #include "PdfObjectStream.h"
 #include "PdfFontMetricsFreetype.h"
-#include "PdfInputDevice.h"
-#include "PdfOutputDevice.h"
+#include <podofo/auxiliary/InputDevice.h>
+#include <podofo/auxiliary/OutputDevice.h>
 
 using namespace std;
 using namespace PoDoFo;
@@ -161,7 +161,7 @@ void WidthExporter::update(unsigned cid, unsigned width)
 {
     if (cid == (m_start + m_rangeCount))
     {
-        // continous gid
+        // continuous gid
         if (width - m_width != 0)
         {
             // different width, so emit if previous range was with same width

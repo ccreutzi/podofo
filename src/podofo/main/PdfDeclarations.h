@@ -4,24 +4,28 @@
  * SPDX-License-Identifier: LGPL-2.0-or-later
  */
 
-#ifndef PDF_DEFINES_H
-#define PDF_DEFINES_H
+#ifndef PDF_DECLARATIONS_H
+#define PDF_DECLARATIONS_H
 
-/** \file PdfDeclarations.h
- *        This file should be included as the FIRST file in every header of
- *        PoDoFo lib. It includes all standard files, defines some useful
- *        macros, some datatypes and all important enumeration types. On
- *        supporting platforms it will be precompiled to speed compilation.
+#ifdef PDF_ERROR_H
+    #error "Don't include PdfDeclarations.h in PdfError.h"
+#endif
+
+/**
+ * \file PdfDeclarations.h
+ *      This file should be included as the FIRST file in every header of
+ *      PoDoFo lib. It includes all standard files, defines some useful
+ *      macros, some datatypes and all important enumeration types. On
+ *      supporting platforms it will be precompiled to speed compilation.
  */
 
  // Include some base macro definitions
-#include "basedefs.h"
+#include <podofo/auxiliary/basedefs.h>
 
-// Include common system files
-#include "baseincludes.h"
+// Include common system headers
+#include <podofo/auxiliary/baseincludes.h>
 
-#include "PdfCompilerCompat.h"
-#include "PdfVersion.h"
+#include <podofo/auxiliary/Version.h>
 
 // Error Handling Defines
 #include "PdfError.h"
@@ -310,7 +314,7 @@ enum class PdfFontMatchBehaviorFlags
  * Enum for the colorspaces supported
  * by PDF.
  */
-enum class PdfColorSpace : uint8_t
+enum class PdfColorSpaceType : uint8_t
 {
     Unknown = 0,
     DeviceGray,
@@ -365,12 +369,11 @@ enum class PdfStrokeStyle
     Dash,
     Dot,
     DashDot,
-    DashDotDot,
-    Custom
+    DashDotDot
 };
 
 /**
- * Enum to specifiy the initial information of the
+ * Enum to specify the initial information of the
  * info dictionary.
  */
 enum class PdfInfoInitial
@@ -426,15 +429,31 @@ enum class PdfSaveOptions
     None = 0,
     _Reserved1 = 1,
     _Reserved2 = 2,
+    /** Don't flate compress plain/uncompressed streams
+     * \remarks Already compressed objects will not be affected
+     */
     NoFlateCompress = 4,
     NoCollectGarbage = 8,
-    NoModifyDateUpdate = 16,
+    /**
+     * Don't update the trailer "/Info/ModDate" with current
+     * time and synchronize XMP metadata "/Catalog/Metadata"
+     *
+     * Use this option to produce deterministic PDF output, or
+     * if you want to manually handle the manipulation of the
+     * XMP packet
+     */
+    NoMetadataUpdate = 16,
     Clean = 32,
+
+    /**
+      * \deprecated Use NoMetadataUpdate instead
+      */
+    NoModifyDateUpdate = NoMetadataUpdate
 };
 
 /**
  * Enum holding the supported page sizes by PoDoFo.
- * Can be used to construct a PdfRect structure with
+ * Can be used to construct a Rect structure with
  * measurements of a page object.
  *
  * \see PdfPage
@@ -512,7 +531,7 @@ enum class PdfStandard14FontType
 
 /** The type of the annotation.
  *  PDF supports different annotation types, each of
- *  them has different keys and propeties.
+ *  them has different keys and properties.
  *
  *  Not all annotation types listed here are supported yet.
  *
@@ -752,6 +771,27 @@ enum class PdfBlendMode
     Luminosity,
 };
 
+enum class PdfSignatureType
+{
+    Unknown = 0,
+    PAdES_B = 1,
+    Pkcs7 = 2,
+};
+
+enum class PdfEncryptionAlgorithm
+{
+    Unknown = 0,
+    RSA,
+};
+
+enum class PdfHashingAlgorithm
+{
+    Unknown = 0,
+    SHA256,
+    SHA384,
+    SHA512,
+};
+
 };
 
 ENABLE_BITMASK_OPERATORS(PoDoFo::PdfSaveOptions);
@@ -796,4 +836,4 @@ ENABLE_BITMASK_OPERATORS(PoDoFo::PdfAnnotationFlags);
  *
  */
 
-#endif // PDF_DEFINES_H
+#endif // PDF_DECLARATIONS_H

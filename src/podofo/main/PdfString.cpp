@@ -7,7 +7,7 @@
 #include <podofo/private/PdfDeclarationsPrivate.h>
 #include "PdfString.h"
 
-#include <utfcpp/utf8.h>
+#include <utf8cpp/utf8.h>
 
 #include <podofo/private/PdfEncodingPrivate.h>
 
@@ -16,7 +16,7 @@
 #include "PdfEncodingFactory.h"
 #include "PdfFilter.h"
 #include "PdfTokenizer.h"
-#include "PdfOutputDevice.h"
+#include <podofo/auxiliary/OutputDevice.h>
 
 using namespace std;
 using namespace PoDoFo;
@@ -112,11 +112,11 @@ PdfString PdfString::FromHexData(const string_view& hexView, const PdfStatefulEn
     }
 }
 
-void PdfString::Write(OutputStreamDevice& device, PdfWriteFlags writeMode,
+void PdfString::Write(OutputStream& device, PdfWriteFlags writeMode,
     const PdfStatefulEncrypt& encrypt, charbuff& buffer) const
 {
     (void)writeMode;
-    (void)buffer; // TODO: Just use the supplied buffer istead of the many ones below
+    (void)buffer; // TODO: Just use the supplied buffer instead of the many ones below
 
     // Strings in PDF documents may contain \0 especially if they are encrypted
     // this case has to be handled!

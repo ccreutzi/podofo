@@ -38,9 +38,17 @@ class PODOFO_API PdfObject
     friend class PdfDictionary;
     friend class PdfDocument;
     friend class PdfObjectStream;
+    friend class PdfObjectOutputStream;
     friend class PdfDataContainer;
     friend class PdfObjectStreamParser;
     friend class PdfParser;
+    friend class PdfStreamedObjectStream;
+    friend class PdfWriter;
+    friend class PdfImmediateWriter;
+    friend class PdfXRef;
+    friend class PdfXRefStream;
+    friend class PdfDictionaryElement;
+    friend class PdfArrayElement;
 
 public:
     static PdfObject Null;
@@ -197,7 +205,7 @@ public:
 
     /** Get the value of the object as int64_t
      *
-     *  This method throws if the numer is a floating point number
+     *  This method throws if the number is a floating point number
      *  \return the value of the number
      */
     int64_t GetNumber() const;
@@ -213,7 +221,7 @@ public:
 
     /** Get the value of the object as floating point number
      *
-     *  This method throws if the numer is integer
+     *  This method throws if the number is integer
      *  \return the value of the number
      */
     double GetRealStrict() const;
@@ -298,14 +306,14 @@ public:
     void ForceCreateStream();
 
     /** Write the complete object to a file.
-     *  \param device write the object to this device
+     *  \param stream write the object to this device
      *  \param encrypt an encryption object which is used to encrypt this object
      *                  or nullptr to not encrypt this object
      *  \param writeMode additional options for writing the object
      *  \param keyStop if not KeyNull and a key == keyStop is found
      *                 writing will stop right before this key!
      */
-    void Write(OutputStreamDevice& device, PdfWriteFlags writeMode,
+    void Write(OutputStream& stream, PdfWriteFlags writeMode,
         const PdfEncrypt* encrypt, charbuff& buffer) const;
 
     /** Get a handle to a PDF stream object.
@@ -488,12 +496,36 @@ protected:
     void EnableDelayedLoading();
 
 private:
+    // To be called privately by various classes
+    PdfReference GetReferenceUnsafe() const { return m_Variant.GetReferenceUnsafe(); }
+    const PdfDictionary& GetDictionaryUnsafe() const { return m_Variant.GetDictionaryUnsafe(); }
+    const PdfArray& GetArrayUnsafe() const { return m_Variant.GetArrayUnsafe(); }
+    PdfDictionary& GetDictionaryUnsafe() { return m_Variant.GetDictionaryUnsafe(); }
+    PdfArray& GetArrayUnsafe() { return m_Variant.GetArrayUnsafe(); }
+    void WriteFinal(OutputStream& stream, PdfWriteFlags writeMode,
+        const PdfEncrypt* encrypt, charbuff& buffer);
+
+    // To be called by PdfStreamedObjectStream
+    void SetNumberNoDirtySet(int64_t l);
+
+    // To be called by PdfImmediateWriter
+    void SetImmutable();
+    void WriteHeader(OutputStream& stream, PdfWriteFlags writeMode, charbuff& buffer) const;
+
+    // To be called by PdfDataContainer
+    bool IsImmutable() const { return m_IsImmutable; }
+
     // Assign function that doesn't set dirty
     void Assign(const PdfObject& rhs);
 
     void SetParent(PdfDataContainer& parent);
 
 private:
+    void write(OutputStream& stream, bool skipLengthFix,
+        PdfWriteFlags writeMode, const PdfEncrypt* encrypt, charbuff& buffer) const;
+
+    void assertMutable() const;
+
     void assign(const PdfObject& rhs);
 
     void moveFrom(PdfObject& rhs);
@@ -523,7 +555,7 @@ private:
     PdfDocument* m_Document;
     PdfDataContainer* m_Parent;
     bool m_IsDirty; // Indicates if this object was modified after construction
-
+    bool m_IsImmutable;
     mutable bool m_IsDelayedLoadDone;
     mutable bool m_IsDelayedLoadStreamDone;
     std::unique_ptr<PdfObjectStream> m_Stream;
@@ -623,6 +655,20 @@ private:
     };
 
     template <>
+    struct Object<const PdfName*>
+    {
+        static const PdfName* Get(const PdfObject& obj)
+        {
+            return &obj.GetName();
+        }
+
+        static bool TryGet(const PdfObject& obj, const PdfName*& value)
+        {
+            return obj.TryGetName(value);
+        }
+    };
+
+    template <>
     struct Object<PdfString>
     {
         static PdfString Get(const PdfObject& obj)
@@ -636,7 +682,75 @@ private:
         }
     };
 
+    template <>
+    struct Object<const PdfString*>
+    {
+        static const PdfString* Get(const PdfObject& obj)
+        {
+            return &obj.GetString();
+        }
 
+        static bool TryGet(const PdfObject& obj, const PdfString*& value)
+        {
+            return obj.TryGetString(value);
+        }
+    };
+
+    template <>
+    struct Object<const PdfDictionary*>
+    {
+        static const PdfDictionary* Get(const PdfObject& obj)
+        {
+            return &obj.GetDictionary();
+        }
+
+        static bool TryGet(const PdfObject& obj, const PdfDictionary*& value)
+        {
+            return obj.TryGetDictionary(value);
+        }
+    };
+
+    template <>
+    struct Object<PdfDictionary*>
+    {
+        static PdfDictionary* Get(PdfObject& obj)
+        {
+            return &obj.GetDictionary();
+        }
+
+        static bool TryGet(PdfObject& obj, PdfDictionary*& value)
+        {
+            return obj.TryGetDictionary(value);
+        }
+    };
+
+    template <>
+    struct Object<const PdfArray*>
+    {
+        static const PdfArray* Get(const PdfObject& obj)
+        {
+            return &obj.GetArray();
+        }
+
+        static bool TryGet(const PdfObject& obj, const PdfArray*& value)
+        {
+            return obj.TryGetArray(value);
+        }
+    };
+
+    template <>
+    struct Object<PdfArray*>
+    {
+        static PdfArray* Get(PdfObject& obj)
+        {
+            return &obj.GetArray();
+        }
+
+        static bool TryGet(PdfObject& obj, PdfArray*& value)
+        {
+            return obj.TryGetArray(value);
+        }
+    };
 };
 
 #endif // PDF_OBJECT_H

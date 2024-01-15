@@ -7,7 +7,7 @@
 #include <podofo/private/PdfDeclarationsPrivate.h>
 #include "PdfDictionary.h"
 
-#include "PdfOutputDevice.h"
+#include <podofo/auxiliary/OutputDevice.h>
 
 using namespace std;
 using namespace PoDoFo;
@@ -28,6 +28,7 @@ PdfDictionary::PdfDictionary(PdfDictionary&& rhs) noexcept
 
 PdfDictionary& PdfDictionary::operator=(const PdfDictionary& rhs)
 {
+    AssertMutable();
     m_Map = rhs.m_Map;
     setChildrenParent();
     return *this;
@@ -35,6 +36,7 @@ PdfDictionary& PdfDictionary::operator=(const PdfDictionary& rhs)
 
 PdfDictionary& PdfDictionary::operator=(PdfDictionary&& rhs) noexcept
 {
+    AssertMutable();
     m_Map = std::move(rhs.m_Map);
     setChildrenParent();
     return *this;
@@ -60,6 +62,7 @@ bool PdfDictionary::operator!=(const PdfDictionary& rhs) const
 
 void PdfDictionary::Clear()
 {
+    AssertMutable();
     if (!m_Map.empty())
     {
         m_Map.clear();
@@ -69,16 +72,19 @@ void PdfDictionary::Clear()
 
 PdfObject& PdfDictionary::AddKey(const PdfName& key, const PdfObject& obj)
 {
+    AssertMutable();
     return addKey(key, PdfObject(obj));
 }
 
 PdfObject& PdfDictionary::AddKey(const PdfName& key, PdfObject&& obj)
 {
+    AssertMutable();
     return addKey(key, std::move(obj));
 }
 
 void PdfDictionary::AddKeyIndirect(const PdfName& key, const PdfObject& obj)
 {
+    AssertMutable();
     if (IsIndirectReferenceAllowed(obj))
         (void)addKey(key, obj.GetIndirectReference());
     else
@@ -87,6 +93,7 @@ void PdfDictionary::AddKeyIndirect(const PdfName& key, const PdfObject& obj)
 
 PdfObject& PdfDictionary::AddKeyIndirectSafe(const PdfName& key, const PdfObject& obj)
 {
+    AssertMutable();
     if (IsIndirectReferenceAllowed(obj))
         return addKey(key, obj.GetIndirectReference());
     else
@@ -145,18 +152,20 @@ PdfObject* PdfDictionary::findKey(const string_view& key) const
 
 PdfObject* PdfDictionary::findKeyParent(const string_view& key) const
 {
-    PdfObject* obj = findKey(key);
+    utls::RecursionGuard guard;
+    auto obj = findKey(key);
     if (obj == nullptr)
     {
-        PdfObject* parent = findKey("Parent");
-        if (parent == nullptr)
+        auto parent = findKey("Parent");
+        if (parent == nullptr || parent->GetIndirectReference() == GetOwner()->GetIndirectReference())
         {
             return nullptr;
         }
         else
         {
-            if (parent->IsDictionary())
-                return parent->GetDictionary().findKeyParent(key);
+            PdfDictionary* parentDict;
+            if (parent->TryGetDictionary(parentDict))
+                return parentDict->findKeyParent(key);
             else
                 return nullptr;
         }
@@ -176,6 +185,7 @@ bool PdfDictionary::HasKey(const string_view& key) const
 
 bool PdfDictionary::RemoveKey(const string_view& key)
 {
+    AssertMutable();
     PdfDictionaryMap::iterator found = m_Map.find(key);
     if (found == m_Map.end())
         return false;
@@ -185,7 +195,7 @@ bool PdfDictionary::RemoveKey(const string_view& key)
     return true;
 }
 
-void PdfDictionary::Write(OutputStreamDevice& device, PdfWriteFlags writeMode,
+void PdfDictionary::Write(OutputStream& device, PdfWriteFlags writeMode,
     const PdfStatefulEncrypt& encrypt, charbuff& buffer) const
 {
     if ((writeMode & PdfWriteFlags::Clean) == PdfWriteFlags::Clean)
@@ -262,7 +272,7 @@ const PdfObject& PdfDictionary::MustFindKey(const string_view& key) const
 {
     auto obj = findKey(key);
     if (obj == nullptr)
-        PODOFO_RAISE_ERROR(PdfErrorCode::NoObject);
+        PODOFO_RAISE_ERROR_INFO(PdfErrorCode::NoObject, "No object with key /{} found", key);
 
     return *obj;
 }
@@ -271,7 +281,7 @@ PdfObject& PdfDictionary::MustFindKey(const string_view& key)
 {
     auto obj = findKey(key);
     if (obj == nullptr)
-        PODOFO_RAISE_ERROR(PdfErrorCode::NoObject);
+        PODOFO_RAISE_ERROR_INFO(PdfErrorCode::NoObject, "No object with key /{} found", key);
 
     return *obj;
 }
@@ -290,7 +300,7 @@ const PdfObject& PdfDictionary::MustFindKeyParent(const string_view& key) const
 {
     auto obj = findKeyParent(key);
     if (obj == nullptr)
-        PODOFO_RAISE_ERROR(PdfErrorCode::NoObject);
+        PODOFO_RAISE_ERROR_INFO(PdfErrorCode::NoObject, "No object with key /{} found", key);
 
     return *obj;
 }
@@ -299,7 +309,7 @@ PdfObject& PdfDictionary::MustFindKeyParent(const string_view& key)
 {
     auto obj = findKeyParent(key);
     if (obj == nullptr)
-        PODOFO_RAISE_ERROR(PdfErrorCode::NoObject);
+        PODOFO_RAISE_ERROR_INFO(PdfErrorCode::NoObject, "No object with key /{} found", key);
 
     return *obj;
 }
@@ -311,6 +321,7 @@ unsigned PdfDictionary::GetSize() const
 
 PdfDictionaryIndirectIterable PdfDictionary::GetIndirectIterator()
 {
+    AssertMutable();
     return PdfDictionaryIndirectIterable(*this);
 }
 
@@ -339,11 +350,13 @@ PdfObject& PdfDictionary::MustGetKey(const string_view& key)
 
 PdfDictionary::iterator PdfDictionary::begin()
 {
+    AssertMutable();
     return m_Map.begin();
 }
 
 PdfDictionary::iterator PdfDictionary::end()
 {
+    AssertMutable();
     return m_Map.end();
 }
 

@@ -9,8 +9,8 @@
 
 // NOTE: PdfError.h should not include PdfDeclarations.h, since it is included by it.
 // It should avoid depending on anything defined in PdfDeclarations.h .
-#include "basedefs.h"
-#include "baseincludes.h"
+#include <podofo/auxiliary/basedefs.h>
+#include <podofo/auxiliary/baseincludes.h>
 
 /** \file PdfError.h
  *  Error information and logging is implemented in this file.
@@ -50,7 +50,7 @@ enum class PdfErrorCode
     InvalidTrailerSize,       ///< The trailer size is invalid.
     InvalidDataType,          ///< The passed datatype is invalid or was not recognized
     InvalidXRef,              ///< The XRef table is invalid
-    InvalidXRefStream,        ///< A XRef steam is invalid
+    InvalidXRefStream,        ///< A XRef stream is invalid
     InvalidXRefType,          ///< The XRef type is invalid or was not found
     InvalidPredictor,         ///< Invalid or unimplemented predictor
     InvalidStrokeStyle,       ///< Invalid stroke style during drawing
@@ -90,6 +90,7 @@ enum class PdfErrorCode
     CannotEncryptedForUpdate, ///< Cannot load encrypted documents for update.
 
     XmpMetadata,              ///< Error while creating or reading XMP metadata
+    OpenSSL,                  ///< OpenSSL error
 };
 
 /**

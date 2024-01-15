@@ -7,7 +7,7 @@
 #include <podofo/private/PdfDeclarationsPrivate.h>
 #include "PdfFont.h"
 
-#include <utfcpp/utf8.h>
+#include <utf8cpp/utf8.h>
 
 #include <podofo/private/PdfEncodingPrivate.h>
 #include <podofo/private/PdfStandard14FontData.h>
@@ -16,7 +16,7 @@
 #include "PdfArray.h"
 #include "PdfEncoding.h"
 #include "PdfEncodingFactory.h"
-#include "PdfInputStream.h"
+#include <podofo/auxiliary/InputStream.h>
 #include "PdfObjectStream.h"
 #include "PdfWriter.h"
 #include "PdfCharCodeMap.h"
@@ -68,19 +68,19 @@ PdfFont::PdfFont(PdfObject& obj, const PdfFontMetricsConstPtr& metrics,
 
 PdfFont::~PdfFont() { }
 
-bool PdfFont::TryGetSubstituteFont(PdfFont*& substFont)
+bool PdfFont::TryGetSubstituteFont(PdfFont*& substFont) const
 {
     return TryGetSubstituteFont(PdfFontCreateFlags::None, substFont);
 }
 
-bool PdfFont::TryGetSubstituteFont(PdfFontCreateFlags initFlags, PdfFont*& substFont)
+bool PdfFont::TryGetSubstituteFont(PdfFontCreateFlags initFlags, PdfFont*& substFont) const
 {
     auto encoding = GetEncoding();
     auto& metrics = GetMetrics();
     PdfFontMetricsConstPtr newMetrics;
     if (metrics.HasFontFileData())
     {
-        newMetrics = PdfFontMetricsFreetype::FromMetrics(metrics);
+        newMetrics = PdfFontMetricsFreetype::CreateSubstituteMetrics(metrics);
     }
     else
     {
@@ -530,42 +530,54 @@ void PdfFont::EmbedFontFile(PdfObject& descriptor)
 
 void PdfFont::EmbedFontFileType1(PdfObject& descriptor, const bufferview& data, unsigned length1, unsigned length2, unsigned length3)
 {
-    auto& contents = embedFontFileData(descriptor, "FontFile", data);
-    contents.GetDictionary().AddKey("Length1", static_cast<int64_t>(length1));
-    contents.GetDictionary().AddKey("Length2", static_cast<int64_t>(length2));
-    contents.GetDictionary().AddKey("Length3", static_cast<int64_t>(length3));
+    embedFontFileData(descriptor, "FontFile", [length1, length2, length3](PdfDictionary& dict)
+    {
+        dict.AddKey("Length1", static_cast<int64_t>(length1));
+        dict.AddKey("Length2", static_cast<int64_t>(length2));
+        dict.AddKey("Length3", static_cast<int64_t>(length3));
+    }, data);
 }
 
 void PdfFont::EmbedFontFileType1CCF(PdfObject& descriptor, const bufferview& data)
 {
-    auto& contents = embedFontFileData(descriptor, "FontFile3", data);
-    PdfName subtype;
-    if (IsCIDKeyed())
-        subtype = PdfName("CIDFontType0C");
-    else
-        subtype = PdfName("Type1C");
+    embedFontFileData(descriptor, "FontFile3", [&](PdfDictionary& dict)
+    {
+        PdfName subtype;
+        if (IsCIDKeyed())
+            subtype = PdfName("CIDFontType0C");
+        else
+            subtype = PdfName("Type1C");
 
-    contents.GetDictionary().AddKey(PdfName::KeySubtype, subtype);
+        dict.AddKey(PdfName::KeySubtype, subtype);
+    }, data);
 }
 
 void PdfFont::EmbedFontFileTrueType(PdfObject& descriptor, const bufferview& data)
 {
-    auto& contents = embedFontFileData(descriptor, "FontFile2", data);
-    contents.GetDictionary().AddKey("Length1", static_cast<int64_t>(data.size()));
+    embedFontFileData(descriptor, "FontFile2", [&data](PdfDictionary& dict)
+    {
+        dict.AddKey("Length1", static_cast<int64_t>(data.size()));
+    }, data);
+
 }
 
 void PdfFont::EmbedFontFileOpenType(PdfObject& descriptor, const bufferview& data)
 {
-    auto contents = embedFontFileData(descriptor, "FontFile3", data);
-    contents.GetDictionary().AddKey(PdfName::KeySubtype, PdfName("OpenType"));
+    embedFontFileData(descriptor, "FontFile3", [](PdfDictionary& dict)
+    {
+        dict.AddKey(PdfName::KeySubtype, PdfName("OpenType"));
+    }, data);
 }
 
-PdfObject& PdfFont::embedFontFileData(PdfObject& descriptor, const PdfName& fontFileName, const bufferview& data)
+void PdfFont::embedFontFileData(PdfObject& descriptor, const PdfName& fontFileName,
+    const std::function<void(PdfDictionary& dict)>& dictWriter, const bufferview& data)
 {
     auto& contents = GetDocument().GetObjects().CreateDictionaryObject();
     descriptor.GetDictionary().AddKeyIndirect(fontFileName, contents);
+    // NOTE: Access to directory is mediated by functor to not crash
+    // operations when using PdfStreamedDocument. Do not remove it
+    dictWriter(contents.GetDictionary());
     contents.GetOrCreateStream().SetData(data);
-    return contents;
 }
 
 void PdfFont::initWordSpacingLength()
@@ -636,15 +648,15 @@ double PdfFont::GetUnderlinePosition(const PdfTextState& state) const
 }
 
 // CHECK-ME Should state.GetFontScale() be considered?
-double PdfFont::GetStrikeOutPosition(const PdfTextState& state) const
+double PdfFont::GetStrikeThroughPosition(const PdfTextState& state) const
 {
-    return m_Metrics->GetStrikeOutPosition() * state.FontSize;
+    return m_Metrics->GetStrikeThroughPosition() * state.FontSize;
 }
 
 // CHECK-ME Should state.GetFontScale() be considered?
-double PdfFont::GetStrikeOutThickness(const PdfTextState& state) const
+double PdfFont::GetStrikeThroughThickness(const PdfTextState& state) const
 {
-    return m_Metrics->GetStrikeOutThickness() * state.FontSize;
+    return m_Metrics->GetStrikeThroughThickness() * state.FontSize;
 }
 
 double PdfFont::GetAscent(const PdfTextState& state) const

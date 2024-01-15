@@ -9,7 +9,8 @@
 
 #include "PdfDocument.h"
 #include "PdfExtension.h"
-#include "PdfInputDevice.h"
+#include <podofo/auxiliary/InputDevice.h>
+#include <podofo/auxiliary/OutputDevice.h>
 
 namespace PoDoFo {
 
@@ -20,7 +21,7 @@ class PdfWriter;
  *  PDF files and writing them back to disk.
  *
  *  PdfMemDocument was designed to allow easy access to the object
- *  structur of a PDF file.
+ *  structure of a PDF file.
  *
  *  PdfMemDocument should be used whenever you want to change
  *  the object structure of a PDF file.
@@ -251,7 +252,7 @@ private:
     PdfVersion m_InitialVersion;
     bool m_HasXRefStream;
     int64_t m_PrevXRefOffset;
-    std::unique_ptr<PdfEncrypt> m_Encrypt;
+    std::shared_ptr<PdfEncrypt> m_Encrypt;
     std::shared_ptr<InputStreamDevice> m_device;
 };
 

@@ -84,10 +84,10 @@ bool PdfField::TryCreateFromObject(PdfObject& obj, unique_ptr<PdfField>& field)
 
 unique_ptr<PdfField> PdfField::CreateChild()
 {
-    return createChildField(nullptr, PdfRect());
+    return createChildField(nullptr, Rect());
 }
 
-unique_ptr<PdfField> PdfField::CreateChild(PdfPage& page, const PdfRect& rect)
+unique_ptr<PdfField> PdfField::CreateChild(PdfPage& page, const Rect& rect)
 {
     return createChildField(&page, rect);
 }
@@ -121,7 +121,7 @@ void PdfField::initParent()
     m_Parent = shared_ptr<PdfField>(std::move(field));
 }
 
-unique_ptr<PdfField> PdfField::createChildField(PdfPage* page, const PdfRect& rect)
+unique_ptr<PdfField> PdfField::createChildField(PdfPage* page, const Rect& rect)
 {
     if (m_Widget == nullptr && m_AcroForm == nullptr)
     {
@@ -191,7 +191,7 @@ PdfField& PdfField::Create(const string_view& name,
     else
     {
         // Prepare keys to remove that will stay on the parent
-        const vector<string> parentKeys{ "FT", "Ff", "T", "V" };
+        const vector<string> parentKeys{ "FT", "Ff", "T", "V", "Opt" };
         if (!candidateParent->GetChildren().HasKidsArray())
         {
             PODOFO_INVARIANT(acroForm != null);

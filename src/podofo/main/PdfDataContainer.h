@@ -27,7 +27,7 @@ protected:
     /** Create a new PdfDataOwnedType
      * Can only be called by subclasses
      * \remarks We don't define copy/move constructor as the
-     * the owner is not copied/movied
+     * the owner is not copied/moved
      */
     PdfDataContainer();
 
@@ -46,6 +46,7 @@ protected:
     void SetDirty();
     bool IsIndirectReferenceAllowed(const PdfObject& obj);
     virtual void setChildrenParent() = 0;
+    void AssertMutable() const;
 
 private:
     void SetOwner(PdfObject& owner);

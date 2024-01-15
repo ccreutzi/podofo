@@ -8,7 +8,8 @@
 
 #include <string>
 #include <libxml/tree.h>
-#include <podofo/common/nullable.h>
+#include <libxml/xmlerror.h>
+#include <podofo/auxiliary/nullable.h>
 
 // Cast macro that keep or enforce const to use
 // instead of BAD_CAST
@@ -16,7 +17,7 @@
 
 #define THROW_LIBXML_EXCEPTION(msg)\
 {\
-    xmlErrorPtr error_ = xmlGetLastError();\
+    const xmlError* error_ = xmlGetLastError();\
     if (error_ == nullptr)\
         PODOFO_RAISE_ERROR_INFO(PdfErrorCode::XmpMetadata, msg);\
     else\

@@ -11,7 +11,7 @@
 #include "PdfData.h"
 #include "PdfDictionary.h"
 #include "PdfParserObject.h"
-#include "PdfStreamDevice.h"
+#include <podofo/auxiliary/StreamDevice.h>
 
 using namespace PoDoFo;
 using namespace std;
@@ -142,7 +142,7 @@ void PdfVariant::clear()
     }
 }
 
-void PdfVariant::Write(OutputStreamDevice& device, PdfWriteFlags writeMode,
+void PdfVariant::Write(OutputStream& device, PdfWriteFlags writeMode,
     const PdfStatefulEncrypt& encrypt, charbuff& buffer) const
 {
     switch (m_DataType)
@@ -788,6 +788,31 @@ bool PdfVariant::tryGetArray(PdfArray*& arr) const
 
     arr = (PdfArray*)m_Data.Data;
     return true;
+}
+
+PdfReference PdfVariant::GetReferenceUnsafe() const
+{
+    return m_Data.Reference;
+}
+
+const PdfDictionary& PdfVariant::GetDictionaryUnsafe() const
+{
+    return *(const PdfDictionary*)m_Data.Data;
+}
+
+const PdfArray& PdfVariant::GetArrayUnsafe() const
+{
+    return *(const PdfArray*)m_Data.Data;
+}
+
+PdfDictionary& PdfVariant::GetDictionaryUnsafe()
+{
+    return *(PdfDictionary*)m_Data.Data;
+}
+
+PdfArray& PdfVariant::GetArrayUnsafe()
+{
+    return *(PdfArray*)m_Data.Data;
 }
 
 void PdfVariant::SetBool(bool value)

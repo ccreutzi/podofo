@@ -121,7 +121,7 @@ public:
      */
     void Clear();
 
-    void Write(OutputStreamDevice& device, PdfWriteFlags writeMode,
+    void Write(OutputStream& stream, PdfWriteFlags writeMode,
         const PdfStatefulEncrypt& encrypt, charbuff& buffer) const override;
 
     template <typename T>
@@ -182,7 +182,7 @@ public:
     /**
      * Resize the internal vector.
      * \param count new size
-     * \param value refernce value
+     * \param value reference value
      */
     void Resize(unsigned count, const PdfObject& val = PdfObject());
 
@@ -379,6 +379,7 @@ void PdfArray::insert(const PdfArray::iterator& pos,
     const InputIterator& first,
     const InputIterator& last)
 {
+    AssertMutable();
     auto document = GetObjectDocument();
     InputIterator it1 = first;
     iterator it2 = pos;

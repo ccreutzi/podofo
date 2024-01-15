@@ -1,13 +1,40 @@
+## Version 0.11.0-dev
+- Fixed PdfStreamedDocument, see #88
+- Added high-level signing API, see PdfSignerCMS and "TestSignature1" test case
+- Set PdfSignature to have correct /ByteRange and /Contents after signing with PoDoFo::SignDocument
+- Reviewed PdfFileSpec, PdfAction, PdfDestination API and their usage in
+PdfOutlineItem, PdfOutlines, PdfAnnotationActionBase, PdfAnnotationLink PdfAnnotationFileAttachment
+
+## Version 0.10.3
+- Fixed big performance regression introduced in 0.10, see #108
+- Fixed data loss with encrypted documents, see #99
+- Fixed compilation with VS2022 >= 17.8
+- Fixed compilation using libxml >= 2.12.0
+
+## Version 0.10.2
+- Security related bugfixes #76, #89, #96
+- Some compilation and test fixes
+
+## Version 0.10.1
+- Security bugfixes, #66, #67, #69, #70, #71, #72
+- Rewritten PdfPageCollection for performance
+- PdfCMapEncoding: Fix parsing some invalid CMap(s) supported by Acrobat
+- PdfXRefStreamParserObject: Fixed handling of invalid XRef stream entries
+- Support compilation of the library header (not the library itself) with C++20
+
 ## Version 0.10.0
+- PdfPage/PdfAnnotationCollection/PdfAnnotation: Now functions with
+  rect input assume it to be using the canonical coordinate system
+  with no rotation
 - PdfImage: Added support for CYMK jpeg
 - PdfParser: Cleaned FindToken2 -> FindTokenBackward
 - Renamed base source folder -> main
 - PdfPainter: Revamped API, added full state inspection with current point,
-  added PdfPainterPathContext to create a continuous path (eg. with
-  AddLine, AddArc, etc.), added PdfPainterTextContext to create continuous text
-  Use them through PdfPainter::Path and PdfPainter::Text
-  moved SmoothCurveTo, QuadCurveTo,
-  SmoothQuadCurveTo, ArcTo, Arc() to an helper structure until cleaned
+  added added PdfPainterTextContext to handle text object operations
+  Use it with PdfPainter::Text instance member.
+  Added PdfContentStreamOperators low level interface for PdfPainter
+  moved SmoothCurveTo, QuadCurveTo SmoothQuadCurveTo, ArcTo, Arc,
+  to an helper structure until cleaned
 - PdfFontMetrics: Added FilePath/FaceIndex for debugging, when available
 - PdfFont: Renamed GetStringLength() overloads with
   PdfString to GetEncodedStringLength()
@@ -40,7 +67,7 @@
   for media ones). Added proper copy and move assignment operators
 - PdfImage: Added DecodeTo(pixelFormat)
 
-## Version 0.9.22
+## Version 0.9.22 (pdfmm)
 - Fixed serialization of strings with non ASCII PdfDocEncoding
   characters
 - Removed PdfLocaleImbue
@@ -48,11 +75,11 @@
 - Removed use of std::ostringstream. Added efficient outstringstream
 - Added PdfMath functionalities (matrix transformations and so on)
 
-## Version 0.9.21
+## Version 0.9.21 (pdfmm)
 - Fixed serialization of UTF-16BE strings
 - More lenient PdfDate parsing
 
-## Version 0.9.20
+## Version 0.9.20 (pdfmm)
 
 - The project is now a C++17 library
 - Added move semantics for PdfVariant, PdfObject, PdfArray, PdfDictionary

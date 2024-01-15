@@ -9,9 +9,12 @@
 #include "PdfDictionary.h"
 #include "PdfCanvas.h"
 #include "PdfColor.h"
+#include "PdfDocument.h"
 
 using namespace std;
 using namespace PoDoFo;
+
+static PdfArray getProcSet();
 
 PdfResources::PdfResources(PdfObject& obj)
     : PdfDictionaryElement(obj) { }
@@ -19,7 +22,7 @@ PdfResources::PdfResources(PdfObject& obj)
 PdfResources::PdfResources(PdfDictionary& dict)
     : PdfDictionaryElement(dict.AddKey("Resources", PdfDictionary()))
 {
-    GetDictionary().AddKey("ProcSet", PdfCanvas::GetProcSet());
+    GetDictionary().AddKey("ProcSet", getProcSet());
 }
 
 void PdfResources::AddResource(const PdfName& type, const PdfName& key, const PdfObject& obj)
@@ -79,11 +82,16 @@ const PdfObject* PdfResources::GetResource(const string_view& type, const string
     return getResource(type, key);
 }
 
+const PdfFont* PdfResources::GetFont(const string_view& name) const
+{
+    return GetDocument().GetFonts().GetLoadedFont(*this, name);
+}
+
 void PdfResources::AddColorResource(const PdfColor& color)
 {
     switch (color.GetColorSpace())
     {
-        case PdfColorSpace::Separation:
+        case PdfColorSpaceType::Separation:
         {
             string csPrefix("ColorSpace");
             string csName = color.GetName();
@@ -99,7 +107,7 @@ void PdfResources::AddColorResource(const PdfColor& color)
         }
         break;
 
-        case PdfColorSpace::Lab:
+        case PdfColorSpaceType::Lab:
         {
             if (!GetDictionary().HasKey("ColorSpace")
                 || !GetDictionary().MustFindKey("ColorSpace").GetDictionary().HasKey("ColorSpaceLab"))
@@ -111,12 +119,12 @@ void PdfResources::AddColorResource(const PdfColor& color)
         }
         break;
 
-        case PdfColorSpace::DeviceGray:
-        case PdfColorSpace::DeviceRGB:
-        case PdfColorSpace::DeviceCMYK:
-        case PdfColorSpace::Indexed:
+        case PdfColorSpaceType::DeviceGray:
+        case PdfColorSpaceType::DeviceRGB:
+        case PdfColorSpaceType::DeviceCMYK:
+        case PdfColorSpaceType::Indexed:
             // No colorspace needed
-        case PdfColorSpace::Unknown:
+        case PdfColorSpaceType::Unknown:
         default:
             break;
     }
@@ -151,4 +159,15 @@ PdfDictionary& PdfResources::getOrCreateDictionary(const string_view& type)
         dict = &GetDictionary().AddKey(type, PdfDictionary()).GetDictionary();
 
     return *dict;
+}
+
+PdfArray getProcSet()
+{
+    PdfArray procset;
+    procset.Add(PdfName("PDF"));
+    procset.Add(PdfName("Text"));
+    procset.Add(PdfName("ImageB"));
+    procset.Add(PdfName("ImageC"));
+    procset.Add(PdfName("ImageI"));
+    return procset;
 }

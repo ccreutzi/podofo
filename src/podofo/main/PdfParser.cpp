@@ -10,10 +10,10 @@
 #include "PdfArray.h"
 #include "PdfDictionary.h"
 #include "PdfEncrypt.h"
-#include "PdfInputDevice.h"
+#include <podofo/auxiliary/InputDevice.h>
 #include "PdfMemoryObjectStream.h"
 #include "PdfObjectStreamParser.h"
-#include "PdfOutputDevice.h"
+#include <podofo/auxiliary/OutputDevice.h>
 #include "PdfObjectStream.h"
 #include "PdfVariant.h"
 #include "PdfXRefStreamParserObject.h"
@@ -37,7 +37,7 @@ static unsigned s_MaxObjectCount = (1U << 23) - 1;
 
 PdfParser::PdfParser(PdfIndirectObjectList& objects) :
     m_buffer(std::make_shared<charbuff>(PdfTokenizer::BufferSize)),
-    m_tokenizer(m_buffer, true),
+    m_tokenizer(m_buffer),
     m_Objects(&objects),
     m_StrictParsing(false)
 {
@@ -179,7 +179,7 @@ bool PdfParser::IsPdfFile(InputStreamDevice& device)
         return false;
 
     m_magicOffset = device.GetPosition() - PDF_MAGIC_LENGHT;
-    // try to determine the excact PDF version of the file
+    // try to determine the exact PDF version of the file
     m_PdfVersion = PoDoFo::GetPdfVersion(string_view(versionStr, std::size(versionStr)));
     if (m_PdfVersion == PdfVersion::Unknown)
         return false;
@@ -221,7 +221,7 @@ void PdfParser::readNextTrailer(InputStreamDevice& device)
         PODOFO_RAISE_ERROR(PdfErrorCode::NoTrailer);
 
     // Ignore the encryption in the trailer as the trailer may not be encrypted
-    auto trailer = new PdfParserObject(m_Objects->GetDocument(), device);
+    auto trailer = new PdfParserObject(m_Objects->GetDocument(), device, -1);
     trailer->SetIsTrailer(true);
 
     unique_ptr<PdfParserObject> trailerTemp;
@@ -484,7 +484,7 @@ void PdfParser::ReadXRefSubsection(InputStreamDevice& device, int64_t& firstObje
                 &variant, &generation, &chType, &empty1, &empty2);
 
             if (!CheckXRefEntryType(chType))
-                PODOFO_RAISE_ERROR_INFO(PdfErrorCode::InvalidXRef, "Invalid used keyword, must be eiter 'n' or 'f'");
+                PODOFO_RAISE_ERROR_INFO(PdfErrorCode::InvalidXRef, "Invalid used keyword, must be either 'n' or 'f'");
 
             XRefEntryType type = XRefEntryTypeFromChar(chType);
 
@@ -517,7 +517,7 @@ void PdfParser::ReadXRefSubsection(InputStreamDevice& device, int64_t& firstObje
                 }
                 default:
                 {
-                    // This flow should have beeb alredy been cathed earlier
+                    // This flow should have beeb already been cathed earlier
                     PODOFO_ASSERT(false);
                 }
             }
@@ -598,7 +598,9 @@ void PdfParser::ReadXRefStreamContents(InputStreamDevice& device, size_t offset,
 
 void PdfParser::ReadObjects(InputStreamDevice& device)
 {
-    PODOFO_ASSERT(m_Trailer != nullptr);
+    if (m_Trailer == nullptr) {
+        PODOFO_RAISE_ERROR(PdfErrorCode::NoTrailer);
+    }
     // Check for encryption and make sure that the encryption object
     // is loaded before all other objects
     PdfObject* encrypt = m_Trailer->GetDictionary().GetKey("Encrypt");
@@ -608,9 +610,10 @@ void PdfParser::ReadObjects(InputStreamDevice& device)
         PoDoFo::LogMessage(PdfLogSeverity::Debug, "The PDF file is encrypted");
 #endif // PODOFO_VERBOSE_DEBUG
 
-        if (encrypt->IsReference())
+        PdfReference encryptRef;
+        if (encrypt->TryGetReference(encryptRef))
         {
-            unsigned i = encrypt->GetReference().ObjectNumber();
+            unsigned i = encryptRef.ObjectNumber();
             if (i <= 0 || i >= m_entries.GetSize())
             {
                 PODOFO_RAISE_ERROR_INFO(PdfErrorCode::InvalidEncryptionDict,
@@ -619,7 +622,7 @@ void PdfParser::ReadObjects(InputStreamDevice& device)
             }
 
             // The encryption dictionary is not encrypted
-            unique_ptr<PdfParserObject> obj(new PdfParserObject(device, (ssize_t)m_entries[i].Offset));
+            unique_ptr<PdfParserObject> obj(new PdfParserObject(device, encryptRef, (ssize_t)m_entries[i].Offset));
             try
             {
                 obj->Parse();
@@ -686,7 +689,7 @@ void PdfParser::readObjectsInternal(InputStreamDevice& device)
                         unique_ptr<PdfParserObject> obj(new PdfParserObject(m_Objects->GetDocument(), reference, device, (ssize_t)entry.Offset));
                         try
                         {
-                            obj->SetEncrypt(m_Encrypt.get());
+                            obj->SetEncrypt(m_Encrypt);
                             if (m_Encrypt != nullptr && obj->IsDictionary())
                             {
                                 auto typeObj = obj->GetDictionary().GetKey(PdfName::KeyType);
@@ -765,7 +768,7 @@ void PdfParser::readObjectsInternal(InputStreamDevice& device)
         }
         // the linked free list in the xref section is not always correct in pdf's
         // (especially Illustrator) but Acrobat still accepts them. I've seen XRefs 
-        // where some object-numbers are alltogether missing and multiple XRefs where 
+        // where some object-numbers are altogether missing and multiple XRefs where 
         // the link list is broken.
         // Because PdfIndirectObjectList relies on a unbroken range, fill the free list more
         // robustly from all places which are either free or unparsed
@@ -947,11 +950,6 @@ const PdfObject& PdfParser::GetTrailer() const
 bool PdfParser::IsEncrypted() const
 {
     return m_Encrypt != nullptr;
-}
-
-unique_ptr<PdfEncrypt> PdfParser::TakeEncrypt()
-{
-    return std::move(m_Encrypt);
 }
 
 unsigned PdfParser::GetMaxObjectCount()

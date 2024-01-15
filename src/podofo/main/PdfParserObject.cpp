@@ -11,8 +11,8 @@
 #include "PdfArray.h"
 #include "PdfDictionary.h"
 #include "PdfEncrypt.h"
-#include "PdfInputDevice.h"
-#include "PdfInputStream.h"
+#include <podofo/auxiliary/InputDevice.h>
+#include <podofo/auxiliary/InputStream.h>
 #include "PdfParser.h"
 #include "PdfObjectStream.h"
 #include "PdfVariant.h"
@@ -32,6 +32,10 @@ PdfParserObject::PdfParserObject(PdfDocument& doc, InputStreamDevice& device, ss
 {
 }
 
+PdfParserObject::PdfParserObject(InputStreamDevice& device,
+    const PdfReference& indirectReference, ssize_t offset)
+    : PdfParserObject(nullptr, indirectReference, device, offset) { }
+
 PdfParserObject::PdfParserObject(InputStreamDevice& device, ssize_t offset)
     : PdfParserObject(nullptr, PdfReference(), device, offset) { }
 
@@ -39,11 +43,10 @@ PdfParserObject::PdfParserObject(PdfDocument* doc, const PdfReference& indirectR
     InputStreamDevice& device, ssize_t offset) :
     PdfObject(PdfVariant(), indirectReference, true),
     m_device(&device),
-    m_Encrypt(nullptr),
-    m_IsTrailer(false),
     m_Offset(offset < 0 ? device.GetPosition() : offset),
-    m_HasStream(false),
-    m_StreamOffset(0)
+    m_StreamOffset(0),
+    m_IsTrailer(false),
+    m_HasStream(false)
 {
     // Parsed objects by definition are initially not dirty
     resetDirty();
@@ -165,7 +168,7 @@ void PdfParserObject::parseStream()
     int64_t size = -1;
     char ch;
 
-    auto& lengthObj = this->m_Variant.GetDictionary().MustFindKey(PdfName::KeyLength);
+    auto& lengthObj = this->m_Variant.GetDictionaryUnsafe().MustFindKey(PdfName::KeyLength);
     if (!lengthObj.TryGetNumber(size))
         PODOFO_RAISE_ERROR(PdfErrorCode::InvalidStreamLength);
 
@@ -181,7 +184,7 @@ void PdfParserObject::parseStream()
         {
             // Skip spaces between the stream keyword and the carriage return/line
             // feed or line feed. Actually, this is not required by PDF Reference,
-            // but certain PDFs have additionals whitespaces
+            // but certain PDFs have additional whitespaces
             case ' ':
             case '\t':
                 (void)m_device->ReadChar();
@@ -219,7 +222,7 @@ ReadStream:
     if (m_Encrypt != nullptr && !m_Encrypt->IsMetadataEncrypted())
     {
         // If metadata is not encrypted the Filter is set to "Crypt"
-        auto filterObj = this->m_Variant.GetDictionary().FindKey(PdfName::KeyFilter);
+        auto filterObj = this->m_Variant.GetDictionaryUnsafe().FindKey(PdfName::KeyFilter);
         if (filterObj != nullptr && filterObj->IsArray())
         {
             auto& filters = filterObj->GetArray();
@@ -237,6 +240,9 @@ ReadStream:
     {
         auto input = m_Encrypt->CreateEncryptionInputStream(*m_device, static_cast<size_t>(size), GetIndirectReference());
         getOrCreateStream().InitData(*input, static_cast<ssize_t>(size), PdfFilterFactory::CreateFilterList(*this));
+        // Release the encrypt object after loading the stream.
+        // It's not needed for serialization here
+        m_Encrypt = nullptr;
     }
     else
     {
@@ -251,7 +257,7 @@ void PdfParserObject::checkReference(PdfTokenizer& tokenizer)
     {
         PoDoFo::LogMessage(PdfLogSeverity::Warning,
             "Found object with reference {} different than reported {} in XRef sections",
-            GetIndirectReference().ToString(), reference.ToString());
+            reference.ToString(), GetIndirectReference().ToString());
     }
 }
 

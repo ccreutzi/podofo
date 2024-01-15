@@ -7,7 +7,7 @@
 #if defined(__GNUC__) && !defined(__clang__) && __GNUC__ < 10
 #define WANT_CHARS_FORMAT
 #endif
-#if (defined(__GNUC__) && __GNUC__ < 11) || defined(__clang__)
+#if (defined(__GNUC__) && !defined(__MINGW32__) &&  __GNUC__ < 11) || (defined(__MINGW32__) &&  __GNUC__ < 12) || defined(__clang__)
 #define WANT_FROM_CHARS
 #endif
 
@@ -32,7 +32,7 @@ namespace std
     // parameter since it may create mysterious
     // issues on clang
     inline from_chars_result from_chars(const char* first, const char* last,
-        double& value, chars_format fmt)
+        double& value, chars_format fmt) noexcept
     {
         auto ret = fast_float::from_chars(first, last, value, (fast_float::chars_format)fmt);
         return { ret.ptr, ret.ec };

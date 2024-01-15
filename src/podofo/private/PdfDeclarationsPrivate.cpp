@@ -6,11 +6,10 @@
 #include "PdfDeclarationsPrivate.h"
 
 #include <regex>
-#include <podofo/private/charconv_compat.h>
 #include <podofo/private/utfcpp_extensions.h>
 
-#include <podofo/main/PdfInputStream.h>
-#include <podofo/main/PdfOutputStream.h>
+#include <podofo/auxiliary/InputStream.h>
+#include <podofo/auxiliary/OutputStream.h>
 
 #include <podofo/private/istringviewstream.h>
 
@@ -300,63 +299,105 @@ PdfAnnotationType PoDoFo::NameToAnnotationType(const string_view& str)
         PODOFO_RAISE_ERROR(PdfErrorCode::InternalLogic);
 }
 
-PdfColorSpace PoDoFo::NameToColorSpaceRaw(const string_view& name)
+PdfColorSpaceType PoDoFo::NameToColorSpaceRaw(const string_view& name)
 {
-    if (name == "DeviceGray")
-        return PdfColorSpace::DeviceGray;
-    else if (name == "DeviceRGB")
-        return PdfColorSpace::DeviceRGB;
-    else if (name == "DeviceCMYK")
-        return PdfColorSpace::DeviceCMYK;
-    else if (name == "CalGray")
-        return PdfColorSpace::CalGray;
-    else if (name == "Lab")
-        return PdfColorSpace::Lab;
-    else if (name == "ICCBased")
-        return PdfColorSpace::ICCBased;
-    else if (name == "Indexed")
-        return PdfColorSpace::Indexed;
-    else if (name == "Pattern")
-        return PdfColorSpace::Pattern;
-    else if (name == "Separation")
-        return PdfColorSpace::Separation;
-    else if (name == "DeviceN")
-        return PdfColorSpace::DeviceN;
-    else
+    PdfColorSpaceType colorSpace;
+    if (!PoDoFo::TryNameToColorSpaceRaw(name, colorSpace))
         PODOFO_RAISE_ERROR_INFO(PdfErrorCode::CannotConvertColor, "Unsupported colorspace name: {}", name);
+
+    return colorSpace;
 }
 
-string_view PoDoFo::ColorSpaceToNameRaw(PdfColorSpace colorSpace)
+bool PoDoFo::TryNameToColorSpaceRaw(const string_view& name, PdfColorSpaceType& colorSpace)
+{
+    if (name == "DeviceGray")
+    {
+        colorSpace = PdfColorSpaceType::DeviceGray;
+        return true;
+    }
+    else if (name == "DeviceRGB")
+    {
+        colorSpace = PdfColorSpaceType::DeviceRGB;
+        return true;
+    }
+    else if (name == "DeviceCMYK")
+    {
+        colorSpace = PdfColorSpaceType::DeviceCMYK;
+        return true;
+    }
+    else if (name == "CalGray")
+    {
+        colorSpace = PdfColorSpaceType::CalGray;
+        return true;
+    }
+    else if (name == "Lab")
+    {
+        colorSpace = PdfColorSpaceType::Lab;
+        return true;
+    }
+    else if (name == "ICCBased")
+    {
+        colorSpace = PdfColorSpaceType::ICCBased;
+        return true;
+    }
+    else if (name == "Indexed")
+    {
+        colorSpace = PdfColorSpaceType::Indexed;
+        return true;
+    }
+    else if (name == "Pattern")
+    {
+        colorSpace = PdfColorSpaceType::Pattern;
+        return true;
+    }
+    else if (name == "Separation")
+    {
+        colorSpace = PdfColorSpaceType::Separation;
+        return true;
+    }
+    else if (name == "DeviceN")
+    {
+        colorSpace = PdfColorSpaceType::DeviceN;
+        return true;
+    }
+    else
+    {
+        colorSpace = PdfColorSpaceType::Unknown;
+        return false;
+    }
+}
+
+string_view PoDoFo::ColorSpaceToNameRaw(PdfColorSpaceType colorSpace)
 {
     switch (colorSpace)
     {
-        case PdfColorSpace::DeviceGray:
+        case PdfColorSpaceType::DeviceGray:
             return "DeviceGray"sv;
-        case PdfColorSpace::DeviceRGB:
+        case PdfColorSpaceType::DeviceRGB:
             return "DeviceRGB"sv;
-        case PdfColorSpace::DeviceCMYK:
+        case PdfColorSpaceType::DeviceCMYK:
             return "DeviceCMYK"sv;
-        case PdfColorSpace::CalGray:
+        case PdfColorSpaceType::CalGray:
             return "CalGray"sv;
-        case PdfColorSpace::Lab:
+        case PdfColorSpaceType::Lab:
             return "Lab"sv;
-        case PdfColorSpace::ICCBased:
+        case PdfColorSpaceType::ICCBased:
             return "ICCBased"sv;
-        case PdfColorSpace::Indexed:
+        case PdfColorSpaceType::Indexed:
             return "Indexed"sv;
-        case PdfColorSpace::Pattern:
+        case PdfColorSpaceType::Pattern:
             return "Pattern"sv;
-        case PdfColorSpace::Separation:
+        case PdfColorSpaceType::Separation:
             return "Separation"sv;
-        case PdfColorSpace::DeviceN:
+        case PdfColorSpaceType::DeviceN:
             return "DeviceN"sv;
-        case PdfColorSpace::Unknown:
+        case PdfColorSpaceType::Unknown:
         default:
             PODOFO_RAISE_ERROR(PdfErrorCode::InvalidEnumValue);
     }
 }
 
-PdfFilterType PoDoFo::NameToFilter(const string_view& name)
+PdfFilterType PoDoFo::NameToFilter(const string_view& name, bool lenient)
 {
     if (name == "ASCIIHexDecode")
         return PdfFilterType::ASCIIHexDecode;
@@ -378,29 +419,31 @@ PdfFilterType PoDoFo::NameToFilter(const string_view& name)
         return PdfFilterType::JPXDecode;
     else if (name == "Crypt")
         return PdfFilterType::Crypt;
-    else
-        PODOFO_RAISE_ERROR_INFO(PdfErrorCode::UnsupportedFilter, name);
-}
+    else if (lenient)
+    {
+        // "Acrobat viewers accept the abbreviated filter names shown in table titled
+        // 'Abbreviations for standard filter names' in addition to the standard ones
+        // These abbreviated names are intended for use only in the context of inline images
+        // (see Section 4.8.6, 'Inline Images'), they should not be used as filter names
+        // in any stream object.
+        if (name == "AHx")
+            return PdfFilterType::ASCIIHexDecode;
+        else if (name == "A85")
+            return PdfFilterType::ASCII85Decode;
+        else if (name == "LZW")
+            return PdfFilterType::LZWDecode;
+        else if (name == "Fl")
+            return PdfFilterType::FlateDecode;
+        else if (name == "RL")
+            return PdfFilterType::RunLengthDecode;
+        else if (name == "CCF")
+            return PdfFilterType::CCITTFaxDecode;
+        else if (name == "DCT")
+            return PdfFilterType::DCTDecode;
+        // No short names for JBIG2Decode, JPXDecode, Crypt
+    }
 
-PdfFilterType PoDoFo::NameToFilterShort(const string_view& name)
-{
-    if (name == "AHx")
-        return PdfFilterType::ASCIIHexDecode;
-    else if (name == "A85")
-        return PdfFilterType::ASCII85Decode;
-    else if (name == "LZW")
-        return PdfFilterType::LZWDecode;
-    else if (name == "Fl")
-        return PdfFilterType::FlateDecode;
-    else if (name == "RL")
-        return PdfFilterType::RunLengthDecode;
-    else if (name == "CCF")
-        return PdfFilterType::CCITTFaxDecode;
-    else if (name == "DCT")
-        return PdfFilterType::DCTDecode;
-    // No short names for JBIG2Decode, JPXDecode, Crypt
-    else
-        PODOFO_RAISE_ERROR_INFO(PdfErrorCode::UnsupportedFilter, name);
+    PODOFO_RAISE_ERROR_INFO(PdfErrorCode::UnsupportedFilter, name);
 }
 
 string_view PoDoFo::FilterToName(PdfFilterType filterType)
@@ -621,6 +664,56 @@ bool utls::IsWhiteSpace(char32_t ch)
         case U'\x2029':     // PARAGRAPH SEPARATOR
         // Feed
         case U'\t':         // CHARACTER TABULATION U+0009
+        case U'\n':         // LINE FEED U+000A
+        case U'\v':         // LINE TABULATION U+000B
+        case U'\f':         // FORM FEED U+000C
+        case U'\r':         // CARRIAGE RETURN U+000D
+        case U'\x0085':     // NEXT LINE
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool utls::IsSpaceLikeChar(char32_t ch)
+{
+    switch (ch)
+    {
+        // Space separators
+        case U' ':          // SPACE U+0020
+        case U'\x00A0':     // NO-BREAK SPACE
+        case U'\x1680':     // OGHAM SPACE MARK
+        case U'\x2000':     // EN QUAD
+        case U'\x2001':     // EM QUAD
+        case U'\x2002':     // EN SPACE
+        case U'\x2003':     // EM SPACE
+        case U'\x2004':     // THREE-PER-EM SPACE
+        case U'\x2005':     // FOUR-PER-EM SPACE
+        case U'\x2006':     // SIX-PER-EM SPACE
+        case U'\x2007':     // FIGURE SPACE
+        case U'\x2008':     // PUNCTUATION SPAC
+        case U'\x2009':     // THIN SPACE
+        case U'\x200A':     // HAIR SPACE
+        case U'\x202F':     // NARROW NO-BREAK SPAC
+        case U'\x205F':     // MEDIUM MATHEMATICAL SPACE
+        case U'\x3000':     // IDEOGRAPHIC SPACE
+        // Feed
+        case U'\t':         // CHARACTER TABULATION U+0009
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool utls::IsNewLineLikeChar(char32_t ch)
+{
+    switch (ch)
+    {
+        // Line separators
+        case U'\x2028':     // LINE SEPARATOR
+        // Paragraph separators
+        case U'\x2029':     // PARAGRAPH SEPARATOR
+        // Feed
         case U'\n':         // LINE FEED U+000A
         case U'\v':         // LINE TABULATION U+000B
         case U'\f':         // FORM FEED U+000C
@@ -998,6 +1091,15 @@ void utls::WriteCharHexTo(char buf[2], char ch)
     buf[1] += (buf[1] > 9 ? 'A' - 10 : '0');
 }
 
+string utls::GetCharHexString(const bufferview& buff)
+{
+    string ret(buff.size() * 2, '\0');
+    for (unsigned i = 0; i < buff.size(); i++)
+        utls::WriteCharHexTo(ret.data() + i * 2, buff[i]);
+
+    return ret;
+}
+
 void utls::WriteUtf16BETo(u16string& str, char32_t codePoint)
 {
     str.clear();
@@ -1009,13 +1111,13 @@ void utls::WriteUtf16BETo(u16string& str, char32_t codePoint)
 
 void utls::ReadUtf16BEString(const bufferview& buffer, string& utf8str)
 {
-    utf8::u16bechariterable iterable(buffer.data(), buffer.size());
+    utf8::u16bechariterable iterable(buffer.data(), buffer.size(), true);
     utf8::utf16to8_lenient(iterable.begin(), iterable.end(), std::back_inserter(utf8str));
 }
 
 void utls::ReadUtf16LEString(const bufferview& buffer, string& utf8str)
 {
-    utf8::u16lechariterable iterable(buffer.data(), buffer.size());
+    utf8::u16lechariterable iterable(buffer.data(), buffer.size(), true);
     utf8::utf16to8_lenient(iterable.begin(), iterable.end(), std::back_inserter(utf8str));
 }
 

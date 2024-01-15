@@ -12,17 +12,38 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}
     endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "15.9")
-        message(FATAL_ERROR "MSVC version bust be at least 15.9")
+        message(FATAL_ERROR "MSVC version must be at least 15.9")
     endif()
 else()
     message(WARNING "You are using an unsupported compiler!")
 endif()
 
 set(PODOFO_VERSION_MAJOR "0" CACHE STRING "Major part of podofo version number")
-set(PODOFO_VERSION_MINOR "10" CACHE STRING "Minor part of podofo version number")
+set(PODOFO_VERSION_MINOR "11" CACHE STRING "Minor part of podofo version number")
 set(PODOFO_VERSION_PATCH "0" CACHE STRING "Patchlevel part of podofo version number")
-set(PODOFO_SOVERSION "${PODOFO_VERSION_MAJOR}.${PODOFO_VERSION_MINOR}.${PODOFO_VERSION_PATCH}")
-set(PODOFO_LIBVERSION "${PODOFO_SOVERSION}")
+set(PODOFO_VERSION "${PODOFO_VERSION_MAJOR}.${PODOFO_VERSION_MINOR}.${PODOFO_VERSION_PATCH}")
+set(PODOFO_SOVERSION "3")
+
+set(DOXYGEN_PROJECT_NUMBER "${PODOFO_VERSION}")
+if(NOT "${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+    # Enforce a version suffix if not doing a Release build
+    set(DOXYGEN_PROJECT_NUMBER "${DOXYGEN_PROJECT_NUMBER}-dev")
+endif()
+
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in
+    ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+    @ONLY
+)
+
+find_package(Doxygen)
+if (DOXYGEN_FOUND)
+    # TODO: Add doxygen target
+endif()
+
+if(PODOFO_BUILD_DOC_ONLY)
+    return()
+endif()
 
 #
 # Main includes
@@ -43,24 +64,41 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules" "${CMA
 # variable here that we require to be set elsewhere, otherwise we'll complain.
 set(PODOFO_MAIN_CMAKELISTS_READ TRUE)
 
-if(NOT PODOFO_BUILD_LIB_ONLY)
+if(PODOFO_BUILD_LIB_ONLY)
+    set(PODOFO_BUILD_TEST FALSE)
+    set(PODOFO_BUILD_EXAMPLES FALSE)
+    set(PODOFO_BUILD_TOOLS FALSE)
+else()
+    if (NOT DEFINED PODOFO_BUILD_TEST)
+        set(PODOFO_BUILD_TEST TRUE)
+    endif()
+
+    if (NOT DEFINED PODOFO_BUILD_EXAMPLES)
+        set(PODOFO_BUILD_EXAMPLES TRUE)
+    endif()
+
+    if (NOT DEFINED PODOFO_BUILD_TOOLS)
+        set(PODOFO_BUILD_TOOLS FALSE)
+    endif()
+
     # We assume a standalone build so we set output
     # path to a fixed location
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/target)
     set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/target)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/target)
+    message(STATUS "Binary output directory is \"${CMAKE_BINARY_DIR}/target\"")
 endif()
 
-if (DEFINED PODOFO_SHARED)
-    message(FATAL_ERROR "PODOFO_SHARED shouldn't be defined externally. Set PODOFO_STATIC to TRUE if you need a static build")
+if (DEFINED PODOFO_BUILD_SHARED)
+    message(FATAL_ERROR "PODOFO_BUILD_SHARED shouldn't be defined externally. Set PODOFO_BUILD_STATIC to TRUE if you need a static build")
 endif()
 
-option(PODOFO_STATIC "Build static libraries (.a/.lib)" FALSE)
-if(PODOFO_STATIC)
-    set(PODOFO_SHARED FALSE)
+option(PODOFO_BUILD_STATIC "Build static libraries (.a/.lib)" FALSE)
+if(PODOFO_BUILD_STATIC)
+    set(PODOFO_BUILD_SHARED FALSE)
     add_compile_definitions(PODOFO_STATIC)
 else()
-    set(PODOFO_SHARED TRUE)
+    set(PODOFO_BUILD_SHARED TRUE)
     add_compile_definitions(PODOFO_SHARED)
 endif()
 
@@ -222,23 +260,17 @@ file(APPEND
 add_subdirectory(src/podofo)
 include_directories(${PODOFO_INCLUDE_DIRS})
 
-if(NOT PODOFO_BUILD_LIB_ONLY)
+if(PODOFO_BUILD_TEST)
     enable_testing()
     add_subdirectory(test)
-    add_subdirectory(examples)
-    add_subdirectory(tools)
 endif()
 
-# Export some variables into the config file so it's easier for others
-# to build and link against podofo
+if(PODOFO_BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif()
 
-# To use these dependencies set PODOFO_DIR to the podofo BUILD directory in
-# your build (eg -DPODOFO_DIR=/path/to/podofo when running cmake to configure
-# the app that'll use podofo). See: find_package(...) in the cmake docs.
-if(PODOFO_SHARED)
-    export(TARGETS podofo_shared FILE "${PROJECT_BINARY_DIR}/podofoConfig.cmake")
-else()
-    export(TARGETS podofo_static podofo_private FILE "${PROJECT_BINARY_DIR}/podofoConfig.cmake")
+if(PODOFO_BUILD_TOOLS)
+    add_subdirectory(tools)
 endif()
 
 # Enable packaging
@@ -246,7 +278,7 @@ set(CPACK_PACKAGE_DESCRIPTION "A C++ PDF manipulation library")
 set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/podofo/podofo")
 set(CPACK_PACKAGE_VENDOR "Francesco Pretto")
 set(CPACK_PACKAGE_CONTACT "ceztko@gmail.com")
-set(CPACK_PACKAGE_VERSION ${PODOFO_LIBVERSION})
+set(CPACK_PACKAGE_VERSION ${PODOFO_VERSION})
 if (WIN32)
     # Set MSI generation
     set(CPACK_GENERATOR "WIX")

@@ -8,7 +8,7 @@
 #define PDF_ANNOTATION_H
 
 #include "PdfElement.h"
-#include "PdfRect.h"
+#include <podofo/auxiliary/Rect.h>
 #include "PdfColor.h"
 
 namespace PoDoFo {
@@ -33,7 +33,7 @@ class PODOFO_API PdfAnnotation : public PdfDictionaryElement
     friend class PdfAnnotationCollection;
 
 protected:
-    PdfAnnotation(PdfPage& page, PdfAnnotationType annotType, const PdfRect& rect);
+    PdfAnnotation(PdfPage& page, PdfAnnotationType annotType, const Rect& rect);
     PdfAnnotation(PdfObject& obj, PdfAnnotationType annotType);
 
 public:
@@ -50,11 +50,19 @@ public:
 public:
     /** Set an appearance stream for this object
      *  to specify its visual appearance
-     *  \param obj an XObject
-     *  \param appearance an apperance type to set
+     *  \param xobj an XObject form
+     *  \param appearance an appearance type to set
      *  \param state the state for which set it the obj; states depend on the annotation type
      */
-    void SetAppearanceStream(PdfXObjectForm& obj, PdfAppearanceType appearance = PdfAppearanceType::Normal, const PdfName& state = "");
+    void SetAppearanceStream(const PdfXObjectForm& xobj, PdfAppearanceType appearance = PdfAppearanceType::Normal, const PdfName& state = "");
+
+    /** Set an appearance stream for this object
+     *  to specify its visual appearance without handling page rotations
+     *  \param xobj an XObject form
+     *  \param appearance an appearance type to set
+     *  \param state the state for which set it the obj; states depend on the annotation type
+     */
+    void SetAppearanceStreamRaw(const PdfXObjectForm& xobj, PdfAppearanceType appearance = PdfAppearanceType::Normal, const PdfName& state = "");
 
     void GetAppearanceStreams(std::vector<PdfAppearanceIdentity>& streams) const;
 
@@ -66,7 +74,7 @@ public:
 
     /**
     * \returns the appearance stream for this object
-     *  \param appearance an apperance type to get
+     *  \param appearance an appearance type to get
      *  \param state a child state. Meaning depends on the annotation type
     */
     PdfObject* GetAppearanceStream(PdfAppearanceType appearance = PdfAppearanceType::Normal, const PdfName& state = "");
@@ -75,12 +83,14 @@ public:
     /** Get the rectangle of this annotation.
      *  \returns a rectangle
      */
-    PdfRect GetRect() const;
+    Rect GetRect() const;
+    Rect GetRectRaw() const;
 
     /** Set the rectangle of this annotation.
      * \param rect rectangle to set
      */
-    void SetRect(const PdfRect& rect);
+    void SetRect(const Rect& rect);
+    void SetRectRaw(const Rect& rect);
 
     /** Set the flags of this annotation.
      *  \see GetFlags
@@ -111,7 +121,7 @@ public:
     void SetBorderStyle(double hCorner, double vCorner, double width, const PdfArray& strokeStyle);
 
     /** Set the title of this annotation.
-     *  \param title title of the annoation as string in PDF format
+     *  \param title title of the annotation as string in PDF format
      *
      *  \see GetTitle
      */
@@ -127,7 +137,7 @@ public:
 
     /** Set the text of this annotation.
      *
-     *  \param contents text of the annoation as string in PDF format
+     *  \param contents text of the annotation as string in PDF format
      *
      *  \see GetContents
      */
@@ -169,9 +179,9 @@ public:
     const PdfPage& MustGetPage() const;
 
 private:
-    static std::unique_ptr<PdfAnnotation> Create(PdfPage& page, PdfAnnotationType annotType, const PdfRect& rect);
+    static std::unique_ptr<PdfAnnotation> Create(PdfPage& page, PdfAnnotationType annotType, const Rect& rect);
 
-    static std::unique_ptr<PdfAnnotation> Create(PdfPage& page, const std::type_info& typeInfo, const PdfRect& rect);
+    static std::unique_ptr<PdfAnnotation> Create(PdfPage& page, const std::type_info& typeInfo, const Rect& rect);
 
     void SetPage(PdfPage& page) { m_Page = &page; }
 
@@ -209,9 +219,6 @@ bool PdfAnnotation::TryCreateFromObject(const PdfObject& obj, std::unique_ptr<co
     xobj.reset((const TAnnotation*)xobj_);
     return true;
 }
-
-// helper function, to avoid code duplication
-void SetAppearanceStreamForObject(PdfObject& obj, PdfXObjectForm& xobj, PdfAppearanceType appearance, const PdfName& state);
 
 };
 

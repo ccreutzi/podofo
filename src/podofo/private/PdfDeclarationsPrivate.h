@@ -24,6 +24,7 @@
 
 #include "Format.h"
 #include "numbers_compat.h"
+#include "charconv_compat.h"
 
  // Macro to define friendship with test classes.
  // Must be defined before base declarations
@@ -32,7 +33,7 @@
 #include <podofo/main/PdfDeclarations.h>
 
 #ifdef _WIN32
-// Microsft itself assumes little endian
+// Microsoft itself assumes little endian
 // https://github.com/microsoft/STL/blob/b11945b73fc1139d3cf1115907717813930cedbf/stl/inc/bit#L336
 #define PODOFO_IS_LITTLE_ENDIAN
 #else // Unix
@@ -88,7 +89,7 @@
 
 // This is a do nothing macro that can be used to define
 // an invariant property without actually checking for it,
-// not even in DEBUG build. It's user responsability to
+// not even in DEBUG build. It's user responsibility to
 // ensure it's actually satisfied
 #define PODOFO_INVARIANT(x)
 
@@ -151,7 +152,8 @@ namespace PoDoFo
      *  \param name name representing a colorspace such as DeviceGray
      *  \returns colorspace enum or PdfColorSpace_Unknown if name is unknown
      */
-    PdfColorSpace NameToColorSpaceRaw(const std::string_view& name);
+    PdfColorSpaceType NameToColorSpaceRaw(const std::string_view& name);
+    bool TryNameToColorSpaceRaw(const std::string_view& name, PdfColorSpaceType& colorSpace);
 
     /*
      *  Convert a colorspace enum value into a name such as DeviceRGB
@@ -159,7 +161,7 @@ namespace PoDoFo
      *  \param colorSpace a colorspace
      *  \returns a name
      */
-    std::string_view ColorSpaceToNameRaw(PdfColorSpace colorSpace);
+    std::string_view ColorSpaceToNameRaw(PdfColorSpaceType colorSpace);
 
     std::string_view AnnotationTypeToName(PdfAnnotationType type);
     PdfAnnotationType NameToAnnotationType(const std::string_view& str);
@@ -177,9 +179,7 @@ namespace PoDoFo
     std::vector<std::string> ToPdfKeywordsList(const std::string_view& str);
     std::string ToPdfKeywordsString(const cspan<std::string>&keywords);
 
-    PdfFilterType NameToFilter(const std::string_view& name);
-
-    PdfFilterType NameToFilterShort(const std::string_view& name);
+    PdfFilterType NameToFilter(const std::string_view& name, bool lenient);
 
     std::string_view FilterToName(PdfFilterType filterType);
 
@@ -242,6 +242,10 @@ namespace utls
 
     bool IsStringDelimiter(char32_t ch);
 
+    bool IsSpaceLikeChar(char32_t ch);
+
+    bool IsNewLineLikeChar(char32_t ch);
+
     bool IsWhiteSpace(char32_t ch);
 
     bool IsStringEmptyOrWhiteSpace(const std::string_view& str);
@@ -284,6 +288,8 @@ namespace utls
     // Write the char to the supplied buffer as hexadecimal code
     void WriteCharHexTo(char buf[2], char ch);
 
+    std::string GetCharHexString(const PoDoFo::bufferview& buff);
+
     // Append the unicode code point to a big endian encoded utf16 string
     void WriteUtf16BETo(std::u16string& str, char32_t codePoint);
 
@@ -314,6 +320,24 @@ namespace utls
     void FormatTo(std::string& str, float value, unsigned short precision);
 
     void FormatTo(std::string& str, double value, unsigned short precision);
+
+    template <typename T, typename = std::enable_if_t<std::is_integral<T>::value>>
+    inline bool TryParse(const std::string_view& str, T& val, int base = 10)
+    {
+        if (std::from_chars(str.data(), str.data() + str.size(), val, base).ec == std::errc())
+            return true;
+        else
+            return false;
+    }
+
+    template <typename T, typename = std::enable_if_t<std::is_floating_point<T>::value>>
+    inline bool TryParse(const std::string_view& str, T& val, std::chars_format fmt = std::chars_format::fixed)
+    {
+        if (std::from_chars(str.data(), str.data() + str.size(), val, fmt).ec == std::errc())
+            return true;
+        else
+            return false;
+    }
 
     std::string ToLower(const std::string_view& str);
 

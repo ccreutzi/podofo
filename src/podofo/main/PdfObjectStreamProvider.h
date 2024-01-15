@@ -10,8 +10,8 @@
 #include "PdfDeclarations.h"
 
 #include "PdfEncrypt.h"
-#include "PdfInputStream.h"
-#include "PdfOutputStream.h"
+#include <podofo/auxiliary/InputStream.h>
+#include <podofo/auxiliary/OutputStream.h>
 
 namespace PoDoFo {
 
@@ -37,8 +37,6 @@ public:
     virtual void Write(OutputStream& stream, const PdfStatefulEncrypt& encrypt) = 0;
 
     virtual size_t GetLength() const = 0;
-
-    virtual bool IsLengthHandled() const;
 };
 
 };

@@ -7,7 +7,7 @@
 #include <podofo/private/PdfDeclarationsPrivate.h>
 #include "PdfData.h"
 
-#include "PdfOutputDevice.h"
+#include <podofo/auxiliary/OutputDevice.h>
 
 using namespace std;
 using namespace PoDoFo;
@@ -30,13 +30,13 @@ PdfData& PdfData::operator=(const bufferview& data)
     return *this;
 }
 
-void PdfData::Write(OutputStreamDevice& device, PdfWriteFlags,
+void PdfData::Write(OutputStream& device, PdfWriteFlags,
     const PdfStatefulEncrypt& encrypt, charbuff& buffer) const
 {
     (void)encrypt;
     (void)buffer;
     if (m_writeBeacon != nullptr)
-        *m_writeBeacon = device.GetPosition();
+        *m_writeBeacon = dynamic_cast<OutputStreamDevice&>(device).GetPosition();
 
     device.Write(m_data);
 }

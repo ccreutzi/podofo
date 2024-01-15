@@ -8,12 +8,12 @@
 #define PDF_STRING_STREAM
 
 #include "PdfDeclarations.h"
-#include "PdfOutputStream.h"
+#include <podofo/auxiliary/OutputStream.h>
 
 namespace PoDoFo
 {
     /** A specialized Pdf output string stream
-     * It suplies an iostream-like operator<< interface,
+     * It supplies an iostream-like operator<< interface,
      * while still inheriting OutputStream
      */
     class PODOFO_API PdfStringStream final : public OutputStream

@@ -32,6 +32,8 @@ class PdfString;
  */
 class PODOFO_API PdfVariant final
 {
+    friend class PdfObject;
+    friend class PdfParserObject;
     friend class PdfArray;
     friend class PdfDictionary;
 
@@ -185,7 +187,7 @@ public:
 
     /** Get the value of the object as int64_t
      *
-     *  This method throws if the numer is a floating point number
+     *  This method throws if the number is a floating point number
      *  \return the value of the number
      */
     int64_t GetNumber() const;
@@ -201,7 +203,7 @@ public:
 
     /** Get the value of the object as floating point number
      *
-     *  This method throws if the numer is integer
+     *  This method throws if the number is integer
      *  \return the value of the number
      */
     double GetRealStrict() const;
@@ -284,12 +286,12 @@ public:
     void SetReference(const PdfReference& ref);
 
     /** Write the complete variant to an output device.
-     *  \param device write the object to this device
+     *  \param stream write the object to this stream
      *  \param writeMode additional options for writing this object
      *  \param encrypt an encryption object which is used to encrypt this object
      *                  or nullptr to not encrypt this object
      */
-    void Write(OutputStreamDevice& device, PdfWriteFlags writeMode,
+    void Write(OutputStream& stream, PdfWriteFlags writeMode,
         const PdfStatefulEncrypt& encrypt, charbuff& buffer) const;
 
     /** Assign the values of another PdfVariant to this one.
@@ -314,6 +316,13 @@ public:
 
 public:
     inline PdfDataType GetDataType() const { return m_DataType; }
+
+private:
+    PdfReference GetReferenceUnsafe() const;
+    const PdfDictionary& GetDictionaryUnsafe() const;
+    const PdfArray& GetArrayUnsafe() const;
+    PdfDictionary& GetDictionaryUnsafe();
+    PdfArray& GetArrayUnsafe();
 
 private:
     void clear();

@@ -22,18 +22,15 @@ struct PdfEncodingLimits;
 
 class PODOFO_API PdfFontMetricsFreetype final : public PdfFontMetrics
 {
+    friend class PdfFont;
     friend class PdfFontManager;
 
 public:
-    static std::unique_ptr<PdfFontMetricsFreetype> FromMetrics(const PdfFontMetrics& metrics);
-
-    static std::unique_ptr<PdfFontMetricsFreetype> FromBuffer(const std::shared_ptr<const charbuff>& buffer);
-
     /// <summary>
     /// Create a metrics from a FT_Face
     /// </summary>
     /// <param name="face">The FT_Face. Font data is copied</param>
-    static std::unique_ptr<PdfFontMetricsFreetype> FromFace(FT_Face face);
+    static std::unique_ptr<PdfFontMetricsFreetype> CreateFromFace(FT_Face face);
 
     std::unique_ptr<PdfCMapEncoding> CreateToUnicodeMap(const PdfEncodingLimits& limitHints) const override;
 
@@ -53,9 +50,9 @@ public:
 
     double GetUnderlinePosition() const override;
 
-    double GetStrikeOutPosition() const override;
+    double GetStrikeThroughPosition() const override;
 
-    double GetStrikeOutThickness() const override;
+    double GetStrikeThroughThickness() const override;
 
     std::string_view GetFontName() const override;
 
@@ -111,18 +108,17 @@ protected:
     const PdfCIDToGIDMapConstPtr& getCIDToGIDMap() const override;
 
 private:
-    PdfFontMetricsFreetype(const FreeTypeFacePtr& face, const datahandle& data, const PdfFontMetrics* refMetrics);
+    static std::unique_ptr<PdfFontMetricsFreetype> CreateSubstituteMetrics(const PdfFontMetrics& metrics);
 
-    PdfFontMetricsFreetype(const FreeTypeFacePtr& face, const datahandle& data);
+    PdfFontMetricsFreetype(const FreeTypeFacePtr& face, const datahandle& data, const PdfFontMetrics* refMetrics = nullptr);
 
-    /** Load the metric data from the FTFace data
-     * Called internally by the constructors
-     */
-    void initFromFace(const PdfFontMetrics* refMetrics);
+    void init(const PdfFontMetrics* refMetrics);
 
     void ensureLengthsReady();
 
     void initType1Lengths(const bufferview& view);
+
+    bool tryBuildFallbackUnicodeMap();
 
 private:
     FreeTypeFacePtr m_Face;
@@ -131,7 +127,7 @@ private:
     PdfFontFileType m_FontFileType;
 
     bool m_HasUnicodeMapping;
-    bool m_HasSymbolCharset;
+    std::unique_ptr<std::unordered_map<uint32_t, unsigned>> m_fallbackUnicodeMap;
 
     std::string m_FontBaseName;
     std::string m_FontName;
@@ -154,8 +150,8 @@ private:
     double m_LineSpacing;
     double m_UnderlineThickness;
     double m_UnderlinePosition;
-    double m_StrikeOutThickness;
-    double m_StrikeOutPosition;
+    double m_StrikeThroughThickness;
+    double m_StrikeThroughPosition;
 
     bool m_LengthsReady;
     unsigned m_Length1;

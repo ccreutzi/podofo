@@ -4,18 +4,19 @@
 2.  [Requirements](#requirements)
 3.  [Licensing](#licensing)
 4.  [Development quickstart](#development-quickstart)
-5.  [String encoding and buffer conventions](#string-encoding-and-buffer-conventions)
-6.  [API Stability](#api-stability)
-7.  [PoDoFo tools](#podofo-tools)
-8.  [TODO](#todo)
-9.  [FAQ](#faq)
-10.  [No warranty](#no-warranty)
-11.  [Contributions](#contributions)
-12.  [Authors](#authors)
+5.  [Doxygen Documentation](#doxygen-documentation)
+6.  [String encoding and buffer conventions](#string-encoding-and-buffer-conventions)
+7.  [API Stability](#api-stability)
+8.  [PoDoFo tools](#podofo-tools)
+9.  [TODO](#todo)
+10.  [FAQ](#faq)
+11.  [No warranty](#no-warranty)
+12.  [Contributions](#contributions)
+13.  [Authors](#authors)
 
 ## What is PoDoFo?
 
-PoDoFo is a s a free portable C++ library to work with the PDF file format.
+PoDoFo is a free portable C++ library to work with the PDF file format.
 
 PoDoFo provides classes to parse a PDF file and modify its content
 into memory. The changes can be written back to disk easily.
@@ -26,19 +27,19 @@ support rendering PDF content.
 ## Requirements
 
 To build PoDoFo lib you'll need a c++17 compiler,
-CMake 3.16 and the following libraries:
+CMake 3.16 and the following libraries (tentative minimum versions indicated):
 
-* freetype2
-* fontconfig (required for Unix platforms, optional for Windows)
-* OpenSSL
-* LibXml2
+* freetype2 (2.11)
+* fontconfig (2.13.94, required for Unix platforms, optional for Windows)
+* OpenSSL (1.1 and 3.0 are supported)
+* LibXml2 (2.9.12)
 * zlib
-* libjpeg (optional)
-* libtiff (optional)
-* libpng (optional)
-* libidn (optional)
+* libjpeg (9d, optional)
+* libtiff (4.0.10, optional)
+* libpng (1.6.37, optional)
+* libidn (1.38, optional)
 
-For the most polular toolchains, PoDoFo requires the following
+For the most popular toolchains, PoDoFo requires the following
 minimum versions:
 
 * msvc++ 14.16 (VS 2017 15.9)
@@ -61,41 +62,142 @@ PoDoFo tools are licensed under the [GPL 2.0](https://spdx.org/licenses/GPL-2.0-
 
 ## Development quickstart
 
-Learn by example by looking at the github workflow [definitions](https://github.com/podofo/podofo/tree/master/.github/workflows).
-There are examples using [`vcpkg`](https://vcpkg.io/) under
-[Windows](https://github.com/podofo/podofo/blob/master/.github/workflows/build-win-vcpkg.yml),
-[`brew`](https://brew.sh/) under [macos](https://github.com/podofo/podofo/blob/master/.github/workflows/build-linux.yml),
-and `apt-get` under [ubuntu](https://github.com/podofo/podofo/blob/master/.github/workflows/build-linux.yml), installing all the
-required dependencies, bootstrapping the CMake project, building and testing the library. In Windows,
-follow the vcpkg [quickstart](https://vcpkg.io/en/getting-started.html) guide to setup the package manager repository first.
-It may be also useful to set the enviroment variable `VCPKG_DEFAULT_TRIPLET` to `x64-windows` to default installing 64 bit dependencies
+PoDoFo is known to compile through a multitude of package managers (including `apt-get`, [brew](https://brew.sh/), [vcpkg](https://vcpkg.io/), [Conan](https://conan.io/)), and has public continuous integration working in [Ubuntu Linux](https://github.com/podofo/podofo/blob/master/.github/workflows/build-linux.yml), [MacOS](https://github.com/podofo/podofo/blob/master/.github/workflows/build-linux.yml) and
+[Windows](https://github.com/podofo/podofo/blob/master/.github/workflows/build-win.yml), bootstrapping the CMake project, building and testing the library. It's highly recommended to build PoDoFo using such package managers. 
+
+There's also a playground area in the repository where you can have
+access to pre-build dependencies for some popular architectures/operating systems:
+the playground is the recommended setting to develop the library and reproduce bugs,
+while it's not recommended for the deployment of your application using PoDoFo.
+Have a look to the [Readme](https://github.com/podofo/podofo/tree/master/playground) there.
+
+> **Warning**: PoDoFo is known to be working in cross-compilation toolchains (eg. Android/iOS development), but support may not provided in such scenarios. If you decide to manually build dependencies you are assumed to know how to identity possible library clashes/mismatches and how to deal with compilation/linking problems that can arise in your system.
+
+### Build with apt-get
+
+From the source root run:
+
+```
+sudo apt-get install -y libfontconfig1-dev libfreetype-dev libxml2-dev libssl-dev libjpeg-dev libpng-dev libtiff-dev libidn11-dev
+mkdir build
+cd build
+cmake -DCMAKE_BUILD_TYPE=Debug ..
+cmake --build . --config Debug
+```
+
+### Build with brew
+
+Install [brew](https://brew.sh/), then from the source root run:
+
+```
+brew install fontconfig freetype openssl libxml2 jpeg-turbo libpng libtiff libidn
+mkdir build
+cd build
+cmake  -DCMAKE_BUILD_TYPE=Debug -DCMAKE_FIND_FRAMEWORK=NEVER -DCMAKE_PREFIX_PATH=`brew --prefix` -DFontconfig_INCLUDE_DIR=`brew --prefix fontconfig`/include -DOPENSSL_ROOT_DIR=`brew --prefix openssl@3` ..
+cmake --build . --config Debug
+```
+
+### Build with Conan
+
+Install [conan](https://docs.conan.io/1/installation.html), then from source root run:
+
+```
+mkdir build
+cd build
+conan install ..
+cmake -DCMAKE_BUILD_TYPE=Debug ..
+cmake --build . --config Debug
+```
+
+### Build with vcpkg
+
+Follow the vcpkg [quickstart](https://vcpkg.io/en/getting-started.html) guide to setup the package manager repository first.
+In Windows, it may be also useful to set the environment variable `VCPKG_DEFAULT_TRIPLET` to `x64-windows` to default installing 64 bit dependencies
 and define a `VCPKG_INSTALLATION_ROOT` variable with the location of the repository as created in the quickstart.
 
-Additionally there's a playground area in the repository where you can have access to pre-build
-dependencies for some popular architectures/operating systems. Have a look in the
-[Readme](https://github.com/podofo/podofo/tree/master/playground) there.
+Then from source root run:
+
+```
+vcpkg install fontconfig freetype libxml2 openssl libjpeg-turbo libpng tiff zlib
+mkdir build
+cd build
+cmake -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -DCMAKE_BUILD_TYPE=Debug ..
+cmake --build . --config Debug
+```
+
+### CMake switches
+
+- `PODOFO_BUILD_TEST`: Build the unit tests, defaults to TRUE;
+
+- `PODOFO_BUILD_EXAMPLES`: Build the examples, defaults to TRUE;
+
+- `PODOFO_BUILD_TOOLS`: Build the PoDoFo tools, defaults to FALSE. See
+the relevant [section](https://github.com/podofo/podofo/#podofo-tools) in the Readme;
+
+- `PODOFO_BUILD_LIB_ONLY`: If TRUE, it will build only the library component.
+This unconditionally disable building tests, examples and tools;
+
+- `PODOFO_BUILD_STATIC`: If TRUE, build the library as a static object and use it in tests,
+examples and tools. By default a shared library is built.
+
+### Static linking
+
+If you want to use a static build of PoDoFo and you are including the PoDoFo cmake project it's very simple. Do something like the following in your CMake project:
+
+```
+set(PODOFO_BUILD_LIB_ONLY TRUE CACHE BOOL "" FORCE)
+set(PODOFO_BUILD_STATIC TRUE CACHE BOOL "" FORCE)
+add_subdirectory(podofo)
+# ...
+target_link_libraries(MyTarget podofo::podofo)
+```
+
+If you are linking against a precompiled static build of PoDoFo this is a scenario where the support is limited, as you are really supposed to be able to identify and fix linking errors. The general steps are:
+* Add `PODOFO_STATIC` compilation definition to your project, or before including `podofo.h`;
+* Link the libraries `podofo.a`, `podofo_private.a` (or `podofo.lib`, `podofo_private.lib` with MSVC) and all the [dependent](https://github.com/podofo/podofo/blob/5a07b90f24747a5aafe6f6fd062ee81f4783ab22/CMakeLists.txt#L203C5-L203C24) libraries.
+
+## Doxygen Documentation
+
+The API documentation can be found at https://podofo.github.io/podofo/documentation/ .
+
+### Generate the doxygen documentation
+
+1. **Prerequisite**: Ensure you have Doxygen installed on your machine. If not, visit [Doxygen's official website](http://www.doxygen.nl/) to download and install it.
+
+2. **Generating Documentation**: After completing the build process detailed in the [Development quickstart](#development-quickstart) chapter, navigate to the root directory of PoDoFo's source code.
+Open a terminal or command prompt and run the following command:
+    ```bash
+    doxygen build/Doxyfile
+    ```
+
+3. **Viewing the Documentation**: Once the documentation generation completes, you'll find a `documentation` directory that contains the generated documentation. Open `index.html` in your favorite web browser to view the API documentation.
+    ```bash
+    cd build/doxygen/documentation
+    open index.html
+    ```
 
 ## String encoding and buffer conventions
 
-All ```std::strings``` or ```std::string_view``` in the library are intended
-to hold UTF-8 encoded string content. ```PdfString``` and ```PdfName``` constructors
-accept UTF-8 encoded strings by default (```PdfName``` accept only characters in the
-```PdfDocEncoding``` char set, though). ```charbuff``` abd ```bufferview```
+All `std::strings` or `std::string_view` in the library are intended
+to hold UTF-8 encoded string content. `PdfString` and `PdfName` constructors
+accept UTF-8 encoded strings by default (`PdfName` accept only characters in the
+`PdfDocEncoding` char set, though). `charbuff` abd `bufferview`
 instead represent a generic octet buffer.
 
-## API stability
+## API migration
 
-PoDoFo has an unstable API that is the result of an extensive API review of PoDoFo 0.9.x.
-It is expected to converge to a stable API as soon as the review process is completed.
-See [API Stability](https://github.com/podofo/podofo/wiki/API-Stability) for more details.
+PoDoFo has an unstable API that is the result of an extensive API review of PoDoFo 0.9.x. At this [link](https://github.com/podofo/podofo/wiki/PoDoFo-API-migration-guide/#098---0100) you can find an incomplete guide on migrating 0.9.8 code to 0.10.0. It is expected PoDoFo will converge to a stable API as soon as the review process is completed. See [API Stability](https://github.com/podofo/podofo/wiki/API-Stability) for more details.
 
 ## PoDoFo Tools
 
+> **Warning**: Tools are currently **untested** and **unmaintained**.
+
 PoDoFo tools are still available in the source [tree](https://github.com/podofo/podofo/)
-but are currently untested and unmaintained. It's currently not recommended
-to include them in software distributions. If you want to build them make sure
-to bootstrap the CMake project with ```-DPODOFO_ENABLE_TOOLS=TRUE```.
-Tools are already enabled in the playground.
+but their compilation is disabled by default because they are unsted/unmaintained,
+and will not receive support until their status is cleared. It's not recommended to include them in software distributions.
+If you want to build them make sure to bootstrap the CMake project with ```-DPODOFO_BUILD_TOOLS=TRUE```.
+Tools are conveniently enabled in the [playground](https://github.com/podofo/podofo/tree/master/playground)
+at least to ensure library changes won't break their compilation.
 
 ## TODO
 
@@ -207,14 +309,19 @@ as re-using the already loaded document is still untested (this may change later
 
 ## No warranty
 
-PoDoFo may or may not work for your needs and comes with absolutely no warranty.
-Serious bugs, including security flaws, may be fixed at arbitrary
-timeframes, or not fixed at all.
+PoDoFo may or may not work for your needs and comes with absolutely no
+warranty. Serious bugs, including security flaws, may be fixed at arbitrary
+timeframes, or not fixed at all. Priority of implementing new features
+and bug fixing are decided according to the interests and personal
+preferences of the maintainers. If you need PoDoFo to integrate a feature
+or bug fix that is critical to your workflow, the most welcome and fastest
+approach is to [contribute](https://github.com/podofo/podofo/edit/master/README.md#contributions)
+high-quality patches.
 
 ## Contributions
 
 Please subscribe to the project mailing [list](https://sourceforge.net/projects/podofo/lists/podofo-users)
-which is still followed by several of the original developers of PoDoFO.
+which is still followed by several of the original developers of PoDoFo.
 A gitter [community](https://gitter.im/podofo/community) has also been created to ease some more informal chatter.
 If you find a bug and know how to fix it, or you want to add a small feature, you're welcome to send a [pull request](https://github.com/podofo/podofo/pulls),
 providing it follows the [coding style](https://github.com/podofo/podofo/blob/master/CODING-STYLE.md)
@@ -224,6 +331,7 @@ of the project. As a minimum requisite, any contribution should be:
 
 Other reasons for the rejection, or hold, of a pull request may be:
 
+* the proposed code is incomplete or hacky;
 * the change doesn't fit the scope of PoDoFo;
 * the change shows lack of knowledge/mastery of the PDF specification and/or C++ language;
 * the change breaks automatic tests performed by the maintainer;
@@ -238,8 +346,10 @@ to receive some feedback and discuss some basic design choices.
 
 ## Authors
 
+> **Warning**: Please don't use personal email addresses for technical support inquries, but create
+github [issues](https://github.com/podofo/podofo/issues) instead.
+
 PoDoFo is currently developed and maintained by
 [Francesco Pretto](mailto:ceztko@gmail.com), together with Dominik Seichter and others. See the file
 [AUTHORS.md](https://github.com/podofo/podofo/blob/master/AUTHORS.md) for more details.
-Please don't use personal emails for technical support requests, but create
-github [issues](https://github.com/podofo/podofo/issues) instead.
+

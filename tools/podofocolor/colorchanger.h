@@ -81,7 +81,7 @@ public:
      * @param sInput the input PDF file
      * @param sOutput write output to this filename
      */
-    ColorChanger(IConverter* convert, const std::string& input, const std::string& output);
+    ColorChanger(IConverter* convert, const std::string_view& input, const std::string_view& output);
 
     /**
      * Start processing the input file.
@@ -122,12 +122,12 @@ private:
     /**
      * unused
      */
-    PoDoFo::PdfColorSpace GetColorSpaceForName(const PoDoFo::PdfName& name, PoDoFo::PdfCanvas& page);
+    PoDoFo::PdfColorSpaceType GetColorSpaceForName(const PoDoFo::PdfName& name, PoDoFo::PdfCanvas& page);
 
     /**
      * unused
      */
-    PoDoFo::PdfColorSpace GetColorSpaceForArray(const PoDoFo::PdfArray& arr, PoDoFo::PdfCanvas& page);
+    PoDoFo::PdfColorSpaceType GetColorSpaceForArray(const PoDoFo::PdfArray& arr, PoDoFo::PdfCanvas& page);
 private:
     IConverter* m_converter;
     std::string m_input;

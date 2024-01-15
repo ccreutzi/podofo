@@ -31,12 +31,14 @@ private:
      *                 front of the object which is going to be parsed.
      *  \param buffer buffer to use for parsing to avoid reallocations
      *  \param offset the position in the device from which the object shall be read
-     *                 if lOffset = -1, the object will be read from the current
+     *                 if offset == -1, the object will be read from the current
      *                 position in the file.
      */
     PdfParserObject(PdfDocument& doc, const PdfReference& indirectReference,
-        InputStreamDevice& device, ssize_t offset = -1);
-    PdfParserObject(PdfDocument& doc, InputStreamDevice& device, ssize_t offset = -1);
+        InputStreamDevice& device, ssize_t offset);
+    PdfParserObject(PdfDocument& doc, InputStreamDevice& device, ssize_t offset);
+
+    PdfParserObject(InputStreamDevice& device, const PdfReference& indirectReference, ssize_t offset);
 
 public:
     /**
@@ -84,7 +86,7 @@ public:
      */
     inline ssize_t GetOffset() const { return m_Offset; }
 
-    inline void SetEncrypt(PdfEncrypt* encrypt) { m_Encrypt = encrypt; }
+    inline void SetEncrypt(const std::shared_ptr<PdfEncrypt>& encrypt) { m_Encrypt = encrypt; }
 
     inline void SetIsTrailer(bool isTrailer) { m_IsTrailer = isTrailer; }
 
@@ -111,12 +113,12 @@ private:
     void checkReference(PdfTokenizer& tokenizer);
 
 private:
-    InputStreamDevice*m_device;
-    PdfEncrypt* m_Encrypt;
-    bool m_IsTrailer;
+    std::shared_ptr<PdfEncrypt> m_Encrypt;
+    InputStreamDevice* m_device;
     size_t m_Offset;
-    bool m_HasStream;
     size_t m_StreamOffset;
+    bool m_IsTrailer;
+    bool m_HasStream;
 };
 
 };

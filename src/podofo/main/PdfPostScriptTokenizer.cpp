@@ -10,11 +10,13 @@
 using namespace std;
 using namespace PoDoFo;
 
-PdfPostScriptTokenizer::PdfPostScriptTokenizer()
-    : PdfTokenizer(false) { }
+static PdfTokenizerOptions getPostScriptOptions(PdfPostScriptLanguageLevel level);
 
-PdfPostScriptTokenizer::PdfPostScriptTokenizer(const shared_ptr<charbuff>& buffer)
-    : PdfTokenizer(buffer, false) { }
+PdfPostScriptTokenizer::PdfPostScriptTokenizer(PdfPostScriptLanguageLevel level)
+    : PdfTokenizer(getPostScriptOptions(level)) { }
+
+PdfPostScriptTokenizer::PdfPostScriptTokenizer(const shared_ptr<charbuff>& buffer, PdfPostScriptLanguageLevel level)
+    : PdfTokenizer(buffer, getPostScriptOptions(level)) { }
 
 void PdfPostScriptTokenizer::ReadNextVariant(InputStreamDevice& device, PdfVariant& variant)
 {
@@ -55,7 +57,7 @@ bool PdfPostScriptTokenizer::TryReadNext(InputStreamDevice& device, PdfPostScrip
 
     PdfLiteralDataType dataType = DetermineDataType(device, token, tokenType, variant);
 
-    // asume we read a variant unless we discover otherwise later.
+    // assume we read a variant unless we discover otherwise later.
     psTokenType = PdfPostScriptTokenType::Variant;
     switch (dataType)
     {
@@ -91,4 +93,12 @@ bool PdfPostScriptTokenizer::TryReadNext(InputStreamDevice& device, PdfPostScrip
     }
 
     return true;
+}
+
+PdfTokenizerOptions getPostScriptOptions(PdfPostScriptLanguageLevel level)
+{
+    PdfTokenizerOptions tokenizerOpts;
+    tokenizerOpts.LanguageLevel = level;
+    tokenizerOpts.ReadReferences = false;
+    return tokenizerOpts;
 }

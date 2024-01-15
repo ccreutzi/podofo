@@ -1,5 +1,6 @@
 /**
  * SPDX-FileCopyrightText: (C) 2007 Dominik Seichter <domseichter@web.de>
+ * SPDX-FileCopyrightText: (C) 2023 Francesco Pretto <ceztko@gmail.com>
  * SPDX-License-Identifier: LGPL-2.0-or-later
  */
 
@@ -34,16 +35,14 @@ namespace PoDoFo {
  *  Example of using PdfStreamedDocument:
  *
  *  PdfStreamedDocument document("outputfile.pdf");
- *  PdfPage* page = document.CreatePage(PdfPage::CreateStandardPageSize(PdfPageSize::A4));
- *  PdfFont* font = document.CreateFont("Arial");
+ *  auto& page = document.GetPages().CreatePage(PdfPage::CreateStandardPageSize(PdfPageSize::A4));
+ *  auto* font = document.GetFonts().SearchFont("Arial");
  *
  *  PdfPainter painter;
- *  painter.SetPage(page);
- *  painter.SetFont(font);
- *  painter.DrawText(56.69, page->GetRect().GetHeight() - 56.69, "Hello World!");
- *  painter.FinishPage();
- *
- *  document.Close();
+ *  painter.SetCanvas(page);
+ *  painter.TextState.SetFont(*font, 18);
+ *  painter.DrawText("Hello World!", 56.69, page.GetRect().Height - 56.69);
+ *  painter.FinishDrawing();
  */
 class PODOFO_API PdfStreamedDocument final : public PdfDocument
 {
@@ -81,11 +80,7 @@ public:
     PdfStreamedDocument(const std::string_view& filename, PdfVersion version = PdfVersionDefault,
         PdfEncrypt* encrypt = nullptr, PdfSaveOptions opts = PdfSaveOptions::None);
 
-    /** Close the document. The PDF file on disk is finished.
-     *  No other member function of this class may be called
-     *  after calling this function.
-     */
-    void Close();
+    ~PdfStreamedDocument();
 
 public:
     const PdfEncrypt* GetEncrypt() const override;
@@ -109,8 +104,8 @@ private:
     void init(PdfVersion version, PdfSaveOptions opts);
 
 private:
-    std::unique_ptr<PdfImmediateWriter> m_Writer;
     std::shared_ptr<OutputStreamDevice> m_Device;
+    std::unique_ptr<PdfImmediateWriter> m_Writer;
     PdfEncrypt* m_Encrypt;
 };
 

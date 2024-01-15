@@ -9,7 +9,7 @@
 
 #include <podofo/private/PdfEncodingPrivate.h>
 
-#include "PdfOutputDevice.h"
+#include <podofo/auxiliary/OutputDevice.h>
 #include "PdfTokenizer.h"
 #include "PdfPredefinedEncoding.h"
 
@@ -31,6 +31,9 @@ const PdfName PdfName::KeySize = PdfName("Size");
 const PdfName PdfName::KeySubtype = PdfName("Subtype");
 const PdfName PdfName::KeyType = PdfName("Type");
 const PdfName PdfName::KeyFilter = PdfName("Filter");
+const PdfName PdfName::KeyParent = PdfName("Parent");
+const PdfName PdfName::KeyKids = PdfName("Kids");
+const PdfName PdfName::KeyCount = PdfName("Count");
 
 PdfName::PdfName()
     : m_data(new NameData{ true, { }, nullptr })
@@ -93,7 +96,7 @@ PdfName PdfName::FromRaw(const bufferview& rawcontent)
     return PdfName((charbuff)rawcontent);
 }
 
-void PdfName::Write(OutputStreamDevice& device, PdfWriteFlags,
+void PdfName::Write(OutputStream& device, PdfWriteFlags,
     const PdfStatefulEncrypt& encrypt, charbuff& buffer) const
 {
     (void)encrypt;

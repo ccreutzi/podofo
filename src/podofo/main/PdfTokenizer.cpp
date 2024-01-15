@@ -7,12 +7,10 @@
 #include <podofo/private/PdfDeclarationsPrivate.h>
 #include "PdfTokenizer.h"
 
-#include <podofo/private/charconv_compat.h>
-
 #include "PdfArray.h"
 #include "PdfDictionary.h"
 #include "PdfEncrypt.h"
-#include "PdfInputDevice.h"
+#include <podofo/auxiliary/InputDevice.h>
 #include "PdfName.h"
 #include "PdfString.h"
 #include "PdfReference.h"
@@ -25,13 +23,13 @@ static char getEscapedCharacter(char ch);
 static void readHexString(InputStreamDevice& device, charbuff& buffer);
 static bool isOctalChar(char ch);
 
-PdfTokenizer::PdfTokenizer(bool readReferences)
-    : PdfTokenizer(std::make_shared<charbuff>(BufferSize), readReferences)
+PdfTokenizer::PdfTokenizer(const PdfTokenizerOptions& options)
+    : PdfTokenizer(std::make_shared<charbuff>(BufferSize), options)
 {
 }
 
-PdfTokenizer::PdfTokenizer(const shared_ptr<charbuff>& buffer, bool readReferences)
-    : m_buffer(buffer), m_readReferences(readReferences)
+PdfTokenizer::PdfTokenizer(const shared_ptr<charbuff>& buffer, const PdfTokenizerOptions& options)
+    : m_buffer(buffer), m_options(options)
 {
     if (buffer == nullptr)
         PODOFO_RAISE_ERROR(PdfErrorCode::InvalidHandle);
@@ -116,12 +114,14 @@ bool PdfTokenizer::TryReadNextToken(InputStreamDevice& device, string_view& toke
             if (ch2 == ch1)
             {
                 (void)device.ReadChar();
-                buffer[count] = ch2;
+                buffer[count++] = ch2;
+                if ((int)m_options.LanguageLevel < 2)
+                    continue;
+
                 if (ch1 == '<')
                     tokenType = PdfTokenType::DoubleAngleBracketsLeft;
                 else
                     tokenType = PdfTokenType::DoubleAngleBracketsRight;
-                count++;
             }
             else
             {
@@ -149,7 +149,7 @@ bool PdfTokenizer::TryReadNextToken(InputStreamDevice& device, string_view& toke
             PdfTokenType tokenDelimiterType;
             if (IsTokenDelimiter(ch1, tokenDelimiterType))
             {
-                // All delimeters except << and >> (handled above) are
+                // All delimiters except << and >> (handled above) are
                 // one-character tokens, so if we hit one we can just return it
                 // immediately.
                 tokenType = tokenDelimiterType;
@@ -207,7 +207,7 @@ bool PdfTokenizer::TryReadNextNumber(InputStreamDevice& device, int64_t& value)
     if (!this->TryReadNextToken(device, token, tokenType))
         return false;
 
-    if (std::from_chars(token.data(), token.data() + token.size(), value).ec != std::errc())
+    if (!utls::TryParse(token, value))
     {
         // Don't consume the token
         this->EnqueueToken(token, tokenType);
@@ -292,7 +292,7 @@ PdfTokenizer::PdfLiteralDataType PdfTokenizer::DetermineDataType(InputStreamDevi
             if (dataType == PdfLiteralDataType::Real)
             {
                 double val;
-                if (std::from_chars(token.data(), token.data() + token.length(), val, chars_format::fixed).ec != std::errc())
+                if (!utls::TryParse(token, val))
                 {
                     // Don't consume the token
                     this->EnqueueToken(token, tokenType);
@@ -305,7 +305,7 @@ PdfTokenizer::PdfLiteralDataType PdfTokenizer::DetermineDataType(InputStreamDevi
             else if (dataType == PdfLiteralDataType::Number)
             {
                 int64_t num;
-                if (std::from_chars(token.data(), token.data() + token.size(), num).ec != std::errc())
+                if (!utls::TryParse(token, num))
                 {
                     // Don't consume the token
                     this->EnqueueToken(token, tokenType);
@@ -313,7 +313,7 @@ PdfTokenizer::PdfLiteralDataType PdfTokenizer::DetermineDataType(InputStreamDevi
                 }
 
                 variant = PdfVariant(num);
-                if (!m_readReferences)
+                if (!m_options.ReadReferences)
                     return PdfLiteralDataType::Number;
 
                 // read another two tokens to see if it is a reference
@@ -334,7 +334,7 @@ PdfTokenizer::PdfLiteralDataType PdfTokenizer::DetermineDataType(InputStreamDevi
                     return PdfLiteralDataType::Number;
                 }
 
-                if (std::from_chars(nextToken.data(), nextToken.data() + nextToken.length(), num).ec != std::errc())
+                if (!utls::TryParse(nextToken, num))
                 {
                     // Don't consume the token
                     this->EnqueueToken(nextToken, secondTokenType);
@@ -504,7 +504,7 @@ void PdfTokenizer::ReadString(InputStreamDevice& device, PdfVariant& variant, co
     bool octEscape = false;
     int octCharCount = 0;
     char octValue = 0;
-    int balanceCount = 0; // Balanced parathesis do not have to be escaped in strings
+    int balanceCount = 0; // Balanced parenthesis do not have to be escaped in strings
 
     m_charBuffer.clear();
     while (device.Read(ch))
@@ -636,7 +636,7 @@ void PdfTokenizer::ReadName(InputStreamDevice& device, PdfVariant& variant)
     if (!device.Peek(ch) || IsWhitespace(ch))
     {
         // We have an empty PdfName
-        // NOTE: Delimeters are handled correctly by tryReadNextToken
+        // NOTE: Delimiters are handled correctly by tryReadNextToken
         variant = PdfName();
         return;
     }

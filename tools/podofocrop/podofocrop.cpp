@@ -31,15 +31,15 @@ void print_help()
     printf("\nPoDoFo Version: %s\n\n", PODOFO_VERSION_STRING);
 }
 
-void crop_page(PdfPage& page, const PdfRect& cropBox)
+void crop_page(PdfPage& page, const Rect& cropBox)
 {
     PdfArray arr;
     /*
     printf("%f %f %f %f\n",
-           rCropBox.GetLeft(),
-           rCropBox.GetBottom(),
-           rCropBox.GetWidth(),
-           rCropBox.GetHeight());
+           rCropBox.X,
+           rCropBox.Y,
+           rCropBox.Width,
+           rCropBox.Height);
     */
     cropBox.ToArray(arr);
     page.GetDictionary().AddKey("MediaBox", arr);
@@ -125,14 +125,14 @@ string get_ghostscript_output(const string_view& inputPath)
     return output;
 }
 
-vector<PdfRect> get_crop_boxes(const string_view& input)
+vector<Rect> get_crop_boxes(const string_view& input)
 {
-    vector<PdfRect> rects;
+    vector<Rect> rects;
     string output = get_ghostscript_output(input);
 
     stringstream ss(output);
     string line;
-    PdfRect curRect;
+    Rect curRect;
     bool haveRect = false;
     while (std::getline(ss, line))
     {
@@ -144,7 +144,7 @@ vector<PdfRect> get_crop_boxes(const string_view& input)
                 printf("Failed to read bounding box's four numbers from '%s'\n", line.c_str() + 15);
                 exit(1);
             }
-            curRect = PdfRect(static_cast<double>(x),
+            curRect = Rect(static_cast<double>(x),
                 static_cast<double>(y),
                 static_cast<double>(w - x),
                 static_cast<double>(h - y));
@@ -156,10 +156,10 @@ vector<PdfRect> get_crop_boxes(const string_view& input)
             {
                 // I have no idea, while gs writes BoundingBoxes twice to stdout ..
                 printf("Using bounding box: [ %f %f %f %f ]\n",
-                    curRect.GetLeft(),
-                    curRect.GetBottom(),
-                    curRect.GetWidth(),
-                    curRect.GetHeight());
+                    curRect.X,
+                    curRect.Y,
+                    curRect.Width,
+                    curRect.Height);
                 rects.push_back(curRect);
                 haveRect = false;
             }
@@ -169,51 +169,39 @@ vector<PdfRect> get_crop_boxes(const string_view& input)
     return rects;
 }
 
-int main(int argc, char* argv[])
+void Main(const cspan<string_view>& args)
 {
     PdfCommon::SetMaxLoggingSeverity(PdfLogSeverity::None);
 
-    if (argc != 3)
+    if (args.size() != 3)
     {
         print_help();
         exit(-1);
     }
 
-    const char* inputPath = argv[1];
-    const char* outputPath = argv[2];
+    auto inputPath = args[1];
+    auto outputPath = args[2];
 
-    try
+    printf("Cropping file:\t%s\n", inputPath.data());
+    printf("Writing to   :\t%s\n", outputPath.data());
+
+    vector<Rect> cropBoxes = get_crop_boxes(inputPath);
+
+    PdfMemDocument doc;
+    doc.Load(inputPath);
+
+    if (cropBoxes.size() != doc.GetPages().GetCount())
     {
-        printf("Cropping file:\t%s\n", inputPath);
-        printf("Writing to   :\t%s\n", outputPath);
-
-        vector<PdfRect> cropBoxes = get_crop_boxes(inputPath);
-
-        PdfMemDocument doc;
-        doc.Load(inputPath);
-
-        if (cropBoxes.size() != doc.GetPages().GetCount())
-        {
-            printf("Number of cropboxes obtained form ghostscript does not match with page count (%u, %u)\n",
-                static_cast<unsigned>(cropBoxes.size()), doc.GetPages().GetCount());
-            PODOFO_RAISE_ERROR(PdfErrorCode::InvalidHandle);
-        }
-
-        for (unsigned i = 0; i < doc.GetPages().GetCount(); i++)
-        {
-            auto& page = doc.GetPages().GetPageAt(i);
-            crop_page(page, cropBoxes[i]);
-        }
-
-        doc.Save(outputPath);
-
-    }
-    catch (PdfError& e)
-    {
-        fprintf(stderr, "Error: An error %i ocurred during croppping pages in the pdf file.\n", (int)e.GetCode());
-        e.PrintErrorMsg();
-        return (int)e.GetCode();
+        printf("Number of cropboxes obtained form ghostscript does not match with page count (%u, %u)\n",
+            static_cast<unsigned>(cropBoxes.size()), doc.GetPages().GetCount());
+        PODOFO_RAISE_ERROR(PdfErrorCode::InvalidHandle);
     }
 
-    return 0;
+    for (unsigned i = 0; i < doc.GetPages().GetCount(); i++)
+    {
+        auto& page = doc.GetPages().GetPageAt(i);
+        crop_page(page, cropBoxes[i]);
+    }
+
+    doc.Save(outputPath);
 }

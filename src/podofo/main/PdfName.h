@@ -66,7 +66,7 @@ public:
      */
     std::string GetEscapedName() const;
 
-    void Write(OutputStreamDevice& device, PdfWriteFlags writeMode,
+    void Write(OutputStream& stream, PdfWriteFlags writeMode,
         const PdfStatefulEncrypt& encrypt, charbuff& buffer) const override;
 
     /** \returns the unescaped value of this name object
@@ -125,6 +125,9 @@ public:
     static const PdfName KeySubtype;
     static const PdfName KeyType;
     static const PdfName KeyFilter;
+    static const PdfName KeyParent;
+    static const PdfName KeyKids;
+    static const PdfName KeyCount;
 
 private:
     void expandUtf8String() const;

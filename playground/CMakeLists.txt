@@ -8,14 +8,14 @@ endif()
 unset(CMAKE_CONFIGURATION_TYPES CACHE) # It will also remove it from GUI
 set(CMAKE_CONFIGURATION_TYPES "${CMAKE_BUILD_TYPE}")
 
-project(PoDoFo)
+project(podofo)
 enable_testing() # Needed to enable "make test" from binary dir
 
 # An useful variable to check if we are running from playground
 set(PODOFO_PLAYGROUND TRUE)
 
 if ("${ARCH}" STREQUAL "")
-    message(FATAL_ERROR "ARCH is not set. Run the boostrap scripts")
+    message(FATAL_ERROR "ARCH is not set. Run the bootstrap scripts")
 endif()
 
 if ("${PODOFO_DIR}" STREQUAL "")

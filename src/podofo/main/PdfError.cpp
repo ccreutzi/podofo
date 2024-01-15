@@ -174,6 +174,8 @@ string_view PdfError::ErrorName(PdfErrorCode code)
             return "PdfErrorCode::NotLoadedForUpdate"sv;
         case PdfErrorCode::CannotEncryptedForUpdate:
             return "PdfErrorCode::CannotEncryptedForUpdate"sv;
+        case PdfErrorCode::OpenSSL:
+            return "PdfErrorCode::OpenSSL"sv;
         case PdfErrorCode::Unknown:
             return "PdfErrorCode::Unknown"sv;
         default:
@@ -276,6 +278,8 @@ string_view PdfError::ErrorMessage(PdfErrorCode code)
             return "Cannot load encrypted documents for update."sv;
         case PdfErrorCode::XmpMetadata:
             return "Error while reading or writing XMP metadata"sv;
+        case PdfErrorCode::OpenSSL:
+            return "OpenSSL error"sv;
         case PdfErrorCode::Unknown:
             return "Error code unknown."sv;
         default:
@@ -294,25 +298,34 @@ void PdfError::initFullDescription()
     auto name = PdfError::ErrorName(m_Code);
 
     outstringstream stream;
-    stream << endl << endl << "PoDoFo encountered an error. Error: " << (int)m_Code << name;
+    stream << name;
 
     if (msg.length() != 0)
-        stream << "\tError Description: " << msg;
+        stream << ", " << msg;
 
     if (m_CallStack.size() != 0)
-        stream << "\tCallstack:";
+        stream << endl << "Callstack:";
 
     unsigned i = 0;
     for (auto& info : m_CallStack)
     {
+        if (i > 0)
+            stream << endl;
+
         auto filepath = info.GetFilePath();
-        if (!filepath.empty())
-            stream << "\t#" << i << " Error Source : " << filepath << ": " << info.GetLine();
+        if (filepath.empty())
+        {
+            if (!info.GetInformation().empty())
+                stream << "t#" << i << ", Information: " << info.GetInformation();
+        }
+        else
+        {
+            stream << "t#" << i << " Error Source: " << filepath << '(' << info.GetLine() << ')';
 
-        if (!info.GetInformation().empty())
-            stream << "\t\t" << "Information: " << info.GetInformation();
+            if (!info.GetInformation().empty())
+                stream << ", Information: " << info.GetInformation();
+        }
 
-        stream << endl;
         i++;
     }
 

@@ -8,7 +8,6 @@
 #include "PdfXObject.h"
 
 #include "PdfDictionary.h"
-#include "PdfRect.h"
 #include "PdfVariant.h"
 #include "PdfImage.h"
 #include "PdfPage.h"
@@ -64,18 +63,6 @@ bool PdfXObject::TryCreateFromObject(const PdfObject& obj, unique_ptr<const PdfX
 
 bool PdfXObject::tryCreateFromObject(const PdfObject& obj, PdfXObjectType xobjType, PdfXObject*& xobj)
 {
-    const PdfDictionary* dict;
-    const PdfObject* typeObj;
-    const PdfName* name;
-    if (!obj.TryGetDictionary(dict)
-        || (typeObj = dict->GetKey(PdfName::KeyType)) == nullptr
-        || !typeObj->TryGetName(name)
-        || name->GetString() != "XObject")
-    {
-        xobj = nullptr;
-        return false;
-    }
-
     auto type = getPdfXObjectType(obj);
     if (xobjType != PdfXObjectType::Unknown && type != xobjType)
     {
@@ -110,18 +97,19 @@ bool PdfXObject::tryCreateFromObject(const PdfObject& obj, PdfXObjectType xobjTy
 
 PdfXObjectType PdfXObject::getPdfXObjectType(const PdfObject& obj)
 {
+    // Table 93 of ISO 32000-2:2020(E), the /Type key is optional,
+    // so we don't check for it. If present it should be "XObject"
     const PdfName* name;
     auto subTypeObj = obj.GetDictionary().FindKey(PdfName::KeySubtype);
     if (subTypeObj == nullptr || !subTypeObj->TryGetName(name))
         return PdfXObjectType::Unknown;
 
-    auto subtype = name->GetString();
-    return fromString(subtype);
+    return fromString(name->GetString());
 }
 
 Matrix PdfXObject::GetMatrix() const
 {
-    auto matrixObj = GetObject().GetDictionary().GetKey("Matrix");
+    auto matrixObj = GetDictionary().GetKey("Matrix");
     if (matrixObj == nullptr)
         return Matrix();
 
@@ -139,7 +127,7 @@ void PdfXObject::SetMatrix(const Matrix& m)
     arr.Add(m[4]);
     arr.Add(m[5]);
 
-    GetObject().GetDictionary().AddKey("Matrix", std::move(arr));
+    GetDictionary().AddKey("Matrix", std::move(arr));
 }
 
 bool PdfXObject::tryCreateFromObject(const PdfObject& obj, const type_info& typeInfo, PdfXObject*& xobj)

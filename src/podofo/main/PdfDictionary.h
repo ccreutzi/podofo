@@ -103,6 +103,7 @@ class PODOFO_API PdfDictionary final : public PdfDataContainer
 {
     friend class PdfObject;
     friend class PdfTokenizer;
+    friend class PdfSignature;
 
 public:
     /** Create a new, empty dictionary
@@ -298,7 +299,7 @@ public:
      */
     bool RemoveKey(const std::string_view& key);
 
-    void Write(OutputStreamDevice& device, PdfWriteFlags writeMode,
+    void Write(OutputStream& stream, PdfWriteFlags writeMode,
         const PdfStatefulEncrypt& encrypt, charbuff& buffer) const override;
 
     /**
